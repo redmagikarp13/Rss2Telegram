@@ -1,0 +1,54 @@
+name: Scraper Cron
+
+on:
+  workflow_dispatch: # Permite rodar manualmente pelo GitHub Actions
+  schedule:
+    - cron: '0 11 * * *' # Roda diariamente às 11:00 UTC (08:00 BRT)
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download artifact
+        id: download
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: scraper.yml
+          workflow_conclusion: success
+          name: editais-db
+
+      - name: Move database
+        continue-on-error: true
+        # Se o artefato foi baixado, movemos de volta para o diretório raiz
+        run: mv editais.db editais.db || true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run script
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          DESTINATION: ${{ secrets.DESTINATION }}
+        run: |
+          python src/main.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: editais-db
+          path: editais.db
+          retention-days: 90 # Mantém o histórico por 90 dias
