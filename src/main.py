@@ -48,9 +48,55 @@ def main():
             f"🤖 *Bot do Feed de Oportunidades Iniciado!*\n\n"
             f"✅ Monitoramento ativo em {len(SITES)} fontes.\n"
             f"📂 {len(novos_editais)} editais existentes foram registrados silenciosamente no histórico.\n"
-            f"A partir de agora, enviarei notificação apenas quando novos editais surgirem!"
+            f"Abaixo segue um resumo com o edital mais recente de cada site:"
         )
         notifier.enviar_status(status_msg)
+        
+        # Enviar Resumo por Estado
+        from collections import defaultdict
+        
+        estados = {
+            'Espírito Santo (ES)': ['IFES', 'UFES', 'FAPES', 'SEAD UFES'],
+            'Minas Gerais (MG)': ['UFMG', 'IFMG', 'FAPEMIG', 'FUNDEP'],
+            'São Paulo (SP)': ['USP', 'FAPESP', 'FUSP'],
+            'Santa Catarina (SC)': ['UFSC', 'IFSC', 'FAPEU'],
+            'Rio de Janeiro (RJ)': ['UFRJ'],
+            'Bahia (BA)': ['UFBA'],
+            'Pernambuco (PE)': ['UFPE'],
+            'Rio Grande do Sul (RS)': ['UFRGS'],
+            'Distrito Federal (DF)': ['UnB'],
+            'Pará (PA)': ['FADESP'],
+            'Nacional / Fundações': ['FACTO', 'CAPES', 'CNPq', 'FetchRSS']
+        }
+        
+        # Pega só o primeiro edital (mais recente) de cada site
+        primeiros_por_site = {}
+        for edital in novos_editais:
+            if edital['site'] not in primeiros_por_site:
+                primeiros_por_site[edital['site']] = edital
+                
+        resumo_por_estado = defaultdict(list)
+        for site, edital in primeiros_por_site.items():
+            estado_encontrado = 'Outros'
+            for estado, keywords in estados.items():
+                if any(kw in site for kw in keywords):
+                    estado_encontrado = estado
+                    break
+            resumo_por_estado[estado_encontrado].append(edital)
+            
+        import time
+        for estado, lista in sorted(resumo_por_estado.items()):
+            msg = f"📍 *{estado}*\n\n"
+            for ed in lista:
+                titulo = ed['titulo']
+                if len(titulo) > 90:
+                    titulo = titulo[:87] + "..."
+                titulo_limpo = titulo.replace('[', '(').replace(']', ')')
+                msg += f"{ed.get('emoji', '📋')} *{ed['site']}*\n[{titulo_limpo}]({ed['url']})\n\n"
+            
+            notifier.enviar_status(msg)
+            time.sleep(1) # evita rate limit do Telegram
+
         print("✅ Registro concluído com sucesso.")
         sys.exit(0)
 
