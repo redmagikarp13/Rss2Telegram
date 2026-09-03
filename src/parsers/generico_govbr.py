@@ -41,10 +41,11 @@ class GenericoGovBrParser(BaseParser):
                     'programa', 'pibic', 'pibiti', 'pesquisa', 'extensão'
                 ]):
                     url = self.resolver_url(href, url_base)
+                    data = self.extrair_data_do_element_pai(link)
                     editais.append({
                         'titulo': texto,
                         'url': url,
-                        'data': '',
+                        'data': data,
                     })
 
             if editais:

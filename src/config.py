@@ -24,6 +24,17 @@ CHAT_ID = get_variable('DESTINATION', get_variable('CHAT_ID'))
 DRYRUN = get_variable('DRYRUN', 'false').lower() in ('true', '1', 'yes')
 FIRST_RUN_SILENT = get_variable('FIRST_RUN_SILENT', 'true').lower() in ('true', '1', 'yes')
 
+# Filtro de data — janela deslizante (em dias). 0 = desativado
+EDITAL_MAX_DIAS = int(get_variable('EDITAL_MAX_DIAS', '0'))
+
+# Limite de itens por fonte por execução. 0 = sem limite
+MAX_ITENS_POR_FONTE = int(get_variable('MAX_ITENS_POR_FONTE', '0'))
+
+# Arquivo marcador de primeira execução já concluída (proteção contra DB vazio)
+MARCADOR_PRIMEIRA_EXEC_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), '..', '.primeira_exec_concluida'
+)
+
 # Banco de dados
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'editais.db')
 
@@ -456,12 +467,100 @@ SITES = [
     # ╚═════════════════════════════════════╝
 
     # ┌─────────────────────────────────────┐
+    # │       FEESC (UFSC)                  │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'FEESC - Conexões para Inovar',
+        'feed_url': 'https://www.conexoesparainovar.org.br/blog-feed.xml',
+        'scrape_url': 'https://www.conexoesparainovar.org.br/editais-conexoes-para-inovar',
+        'parser': None,
+        'emoji': '💡',
+    },
+
+    # ┌─────────────────────────────────────┐
     # │       FAPEU (UFSC)                  │
     # └─────────────────────────────────────┘
     {
         'name': 'FAPEU - Editais',
         'feed_url': None,
         'scrape_url': 'https://fapeu.org.br/editais/',
+        'parser': 'generico',
+        'emoji': '🏢',
+    },
+
+    # ┌─────────────────────────────────────┐
+    # │       PRÓ-IFF (IFF)                 │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'PRÓ-IFF - Editais Abertos',
+        'feed_url': None,
+        'scrape_url': 'https://pro-iff.org.br/editais-abertos/',
+        'parser': 'proiff',
+        'emoji': '🏢',
+    },
+
+    # ┌─────────────────────────────────────┐
+    # │       FINATEC (UnB)                 │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'FINATEC - Editais',
+        'feed_url': None,
+        'scrape_url': 'https://www.finatec.org.br/',
+        'parser': 'generico',
+        'emoji': '🏢',
+    },
+
+    # ┌─────────────────────────────────────┐
+    # │       FUNCAMP (Unicamp)             │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'FUNCAMP - Processos Seletivos',
+        'feed_url': None,
+        'scrape_url': 'https://www.funcamp.unicamp.br/',
+        'parser': 'generico',
+        'emoji': '🏢',
+    },
+
+    # ┌─────────────────────────────────────┐
+    # │       FAPUR (UFRRJ)                 │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'FAPUR - Processos Abertos',
+        'feed_url': None,
+        'scrape_url': 'https://www.fapur.org.br/',
+        'parser': 'generico',
+        'emoji': '🏢',
+    },
+
+    # ┌─────────────────────────────────────┐
+    # │       FAPEX (UFBA)                  │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'FAPEX - Editais',
+        'feed_url': None,
+        'scrape_url': 'https://www.fapex.org.br/Fapex/Site/Principal/Edital/index',
+        'parser': 'generico',
+        'emoji': '🏢',
+    },
+
+    # ┌─────────────────────────────────────┐
+    # │       FAURGS (UFRGS)                │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'FAURGS - Editais',
+        'feed_url': None,
+        'scrape_url': 'https://portalfaurgs.com.br/',
+        'parser': 'generico',
+        'emoji': '🏢',
+    },
+
+    # ┌─────────────────────────────────────┐
+    # │       FADEX (UFPI)                  │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'FADEX - Editais',
+        'feed_url': None,
+        'scrape_url': 'https://www.fadex.org.br/',
         'parser': 'generico',
         'emoji': '🏢',
     },

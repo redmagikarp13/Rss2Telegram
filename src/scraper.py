@@ -6,7 +6,87 @@ Engine principal do scraper — abordagem HÍBRIDA.
 import requests
 import feedparser
 import time
+import re
+from datetime import datetime, timedelta
 from parsers import get_parser
+
+
+# ══════════════════════════════════════════════════════════
+# Utilidades de parsing de data
+# ══════════════════════════════════════════════════════════
+
+def _parse_date(data_str):
+    """Tenta converter uma string de data em datetime. Suporta vários formatos."""
+    if not data_str:
+        return None
+
+    data_str = data_str.strip()
+
+    # Formato dd/mm/aaaa ou d/m/aaaa
+    match = re.search(r'(\d{1,2})/(\d{1,2})/(\d{2,4})', data_str)
+    if match:
+        dia, mes, ano = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        if ano < 100:
+            ano += 2000
+        try:
+            return datetime(ano, mes, dia)
+        except ValueError:
+            pass
+
+    # Formato ISO: aaaa-mm-dd
+    match = re.search(r'(\d{4})-(\d{2})-(\d{2})', data_str)
+    if match:
+        try:
+            return datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+        except ValueError:
+            pass
+
+    # Meses em português (abreviado e completo)
+    meses_pt = {
+        'janeiro': 1, 'fevereiro': 2, 'março': 3, 'marco': 3, 'abril': 4,
+        'maio': 5, 'junho': 6, 'julho': 7, 'agosto': 8,
+        'setembro': 9, 'outubro': 10, 'novembro': 11, 'dezembro': 12,
+        'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+        'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12,
+    }
+    for nome_mes, num_mes in meses_pt.items():
+        if nome_mes in data_str.lower():
+            match = re.search(r'(\d{1,2})\s+de\s+(\w+)', data_str, re.IGNORECASE)
+            if not match:
+                match = re.search(r'(\d{1,2})\s+(\w+)', data_str, re.IGNORECASE)
+            if match:
+                dia = int(match.group(1))
+                ano_match = re.search(r'(\d{4})', data_str)
+                ano = int(ano_match.group(1)) if ano_match else datetime.now().year
+                try:
+                    return datetime(ano, num_mes, dia)
+                except ValueError:
+                    pass
+
+    return None
+
+
+def _filtrar_por_data(editais, max_dias):
+    """Remove editais com data mais antiga que max_dias. Editais sem data são mantidos."""
+    if max_dias <= 0:
+        return editais
+
+    cutoff = datetime.now() - timedelta(days=max_dias)
+    filtrados = []
+    for edital in editais:
+        data_str = edital.get('data', '')
+        if not data_str:
+            # Sem data → mantém (não podemos filtrar sem informação)
+            filtrados.append(edital)
+            continue
+        data_parsed = _parse_date(data_str)
+        if data_parsed is None:
+            # Data não parseável → mantém
+            filtrados.append(edital)
+            continue
+        if data_parsed >= cutoff:
+            filtrados.append(edital)
+    return filtrados
 
 
 class ScraperEngine:
@@ -24,9 +104,11 @@ class ScraperEngine:
         'Connection': 'keep-alive',
     }
 
-    def __init__(self, sites, timeout=30):
+    def __init__(self, sites, timeout=30, max_dias=0, max_itens_por_fonte=0):
         self.sites = sites
         self.timeout = timeout
+        self.max_dias = max_dias
+        self.max_itens_por_fonte = max_itens_por_fonte
 
     def _tentar_rss(self, feed_url):
         """Tenta ler editais via RSS feed. Retorna lista de editais ou None se falhar."""
@@ -68,11 +150,30 @@ class ScraperEngine:
                 url = entry.get('link', '').strip()
                 data = entry.get('published', entry.get('updated', '')).strip()
 
+                # Tentar converter data do feedparser para string dd/mm/aaaa
+                data_str = data
+                if not data_str:
+                    published = entry.get('published_parsed') or entry.get('updated_parsed')
+                    if published:
+                        try:
+                            dt = datetime(*published[:6])
+                            data_str = dt.strftime('%d/%m/%Y')
+                        except Exception:
+                            pass
+
+                # Filtro de data
+                if self.max_dias > 0 and data_str:
+                    data_parsed = _parse_date(data_str)
+                    if data_parsed:
+                        cutoff = datetime.now() - timedelta(days=self.max_dias)
+                        if data_parsed < cutoff:
+                            continue
+
                 if titulo and url:
                     editais.append({
                         'titulo': titulo,
                         'url': url,
-                        'data': data,
+                        'data': data_str,
                     })
 
             return editais if editais else None
@@ -155,20 +256,40 @@ class ScraperEngine:
         print(f"\n🌐 Iniciando varredura de {len(self.sites)} fonte(s)...\n")
 
         todos_editais = []
-        stats = {'rss': 0, 'scraping': 0, 'vazio': 0}
 
         for site in self.sites:
             editais = self.scrape_site(site)
             if editais:
                 todos_editais.extend(editais)
-            else:
-                stats['vazio'] += 1
 
             # Pausa entre requisições
             time.sleep(1.5)
 
-        print(f"\n📊 Varredura finalizada:")
-        print(f"   📋 {len(todos_editais)} edital(is) encontrado(s)")
-        print(f"   ⚠️ {stats['vazio']} fonte(s) sem resultado\n")
+        print(f"\n📋 {len(todos_editais)} edital(is) encontrado(s) antes dos filtros")
+
+        # Filtro por data (janela deslizante)
+        if self.max_dias > 0:
+            antes = len(todos_editais)
+            todos_editais = _filtrar_por_data(todos_editais, self.max_dias)
+            removidos = antes - len(todos_editais)
+            if removidos > 0:
+                print(f"📅 Filtro de data (>{self.max_dias} dias): {removidos} edital(is) antigo(s) removido(s)")
+
+        # Limite de itens por fonte
+        if self.max_itens_por_fonte > 0:
+            por_site = {}
+            for edital in todos_editais:
+                site = edital['site']
+                if site not in por_site:
+                    por_site[site] = []
+                por_site[site].append(edital)
+
+            todos_editais = []
+            for site, editais in por_site.items():
+                if len(editais) > self.max_itens_por_fonte:
+                    print(f"   ⚡ {site}: limitado de {len(editais)} para {self.max_itens_por_fonte}")
+                todos_editais.extend(editais[:self.max_itens_por_fonte])
+
+        print(f"📋 {len(todos_editais)} edital(is) após filtros\n")
 
         return todos_editais

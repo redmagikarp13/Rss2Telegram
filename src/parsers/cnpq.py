@@ -33,10 +33,11 @@ class CnpqParser(BaseParser):
                     continue
 
                 url = self.resolver_url(href, url_base)
+                data = self.extrair_data_do_element_pai(link)
                 editais.append({
                     'titulo': texto,
                     'url': url,
-                    'data': '',
+                    'data': data,
                 })
 
             if editais:
@@ -54,10 +55,11 @@ class CnpqParser(BaseParser):
                     'chamada', 'edital', 'bolsa', 'programa', 'seleção'
                 ]):
                     url = self.resolver_url(href, url_base)
+                    data = self.extrair_data_do_element_pai(link)
                     editais.append({
                         'titulo': texto,
                         'url': url,
-                        'data': '',
+                        'data': data,
                     })
 
         return editais

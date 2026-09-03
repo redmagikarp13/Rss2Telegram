@@ -4,6 +4,7 @@ from .ufmg import UfmgParser
 from .generico_govbr import GenericoGovBrParser
 from .generico import GenericoParser
 from .cnpq import CnpqParser
+from .proiff import ProIffParser
 
 # Mapa de parsers disponíveis (nome -> classe)
 PARSERS = {
@@ -13,6 +14,7 @@ PARSERS = {
     'generico_govbr': GenericoGovBrParser,
     'generico': GenericoParser,
     'cnpq': CnpqParser,
+    'proiff': ProIffParser,
 }
 
 

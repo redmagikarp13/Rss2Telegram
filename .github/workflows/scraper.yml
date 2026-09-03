@@ -23,10 +23,12 @@ jobs:
           workflow_conclusion: success
           name: editais-db
 
-      - name: Move database
+      - name: Move database and marker
         continue-on-error: true
         # Se o artefato foi baixado, movemos de volta para o diretório raiz
-        run: mv editais.db editais.db || true
+        run: |
+          mv editais.db editais.db || true
+          mv .primeira_exec_concluida .primeira_exec_concluida || true
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -50,5 +52,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: editais-db
-          path: editais.db
+          path: |
+            editais.db
+            .primeira_exec_concluida
           retention-days: 90 # Mantém o histórico por 90 dias

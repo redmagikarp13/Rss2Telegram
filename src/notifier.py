@@ -49,6 +49,41 @@ class Notifier:
             print(f"[ERRO] Falha ao enviar mensagem: {e}")
             return False
 
+    def enviar_atualizacao(self, edital):
+        """Envia notificação de atualização de edital existente."""
+        emoji = edital.get('emoji', '📋')
+        site = edital.get('site', 'Desconhecido')
+        titulo = edital.get('titulo', 'Sem título')
+        url = edital.get('url', '')
+        data = edital.get('data', '')
+
+        mensagem = f"🔄 *Edital Atualizado!*\n\n"
+        mensagem += f"📌 *{self._escape_md(titulo)}*\n"
+        mensagem += f"🏛️ {self._escape_md(site)}\n"
+        if data:
+            mensagem += f"📅 {self._escape_md(data)}\n"
+        if url:
+            mensagem += f"🔗 [Ver edital]({url})\n"
+
+        if self.dryrun:
+            print(f"[DRYRUN] Atualização — enviaria para {self.chat_id}:")
+            print(mensagem)
+            print("---")
+            return True
+
+        try:
+            self.bot.send_message(
+                self.chat_id,
+                mensagem,
+                parse_mode='Markdown',
+                disable_web_page_preview=False
+            )
+            time.sleep(1)
+            return True
+        except Exception as e:
+            print(f"[ERRO] Falha ao enviar atualização: {e}")
+            return False
+
     def enviar_resumo(self, novos_por_site):
         """Envia um resumo de todos os novos editais encontrados."""
         if not novos_por_site:

@@ -41,6 +41,8 @@ class IfesParser(BaseParser):
                             data_elem = item.find(class_=lambda x: x and ('date' in x.lower() or 'data' in x.lower())) if item else None
                             if data_elem:
                                 data = self.limpar_texto(data_elem.get_text())
+                            if not data:
+                                data = self.extrair_data_do_element_pai(link)
 
                             editais.append({
                                 'titulo': titulo,
@@ -64,10 +66,11 @@ class IfesParser(BaseParser):
                     url = self.resolver_url(href, url_base)
 
                     if texto and url and len(texto) > 10:
+                        data = self.extrair_data_do_element_pai(link)
                         editais.append({
                             'titulo': texto,
                             'url': url,
-                            'data': '',
+                            'data': data,
                         })
 
         return editais

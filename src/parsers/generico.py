@@ -54,11 +54,12 @@ class GenericoParser(BaseParser):
             texto_lower = texto.lower()
             href_lower = href.lower()
             if any(kw in texto_lower or kw in href_lower for kw in self.KEYWORDS):
+                data = self.extrair_data_do_element_pai(link)
                 urls_vistas.add(url)
                 editais.append({
                     'titulo': texto,
                     'url': url,
-                    'data': '',
+                    'data': data,
                 })
 
         return editais
