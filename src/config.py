@@ -298,17 +298,6 @@ SITES = [
     },
 
     # ┌─────────────────────────────────────┐
-    # │       UFES                          │
-    # └─────────────────────────────────────┘
-    {
-        'name': 'UFES - PRPPG Editais',
-        'feed_url': None,
-        'scrape_url': 'https://prppg.ufes.br/editais',
-        'parser': 'generico',
-        'emoji': '🟤',
-    },
-
-    # ┌─────────────────────────────────────┐
     # │  UnAC - Universidade Aberta do ES   │
     # └─────────────────────────────────────┘
     {
