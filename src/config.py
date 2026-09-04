@@ -286,6 +286,28 @@ SITES = [
     },
 
     # ┌─────────────────────────────────────┐
+    # │       UNIRIO - CEAD (EaD)           │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'UNIRIO - EaD (CEAD/UAB)',
+        'feed_url': None,
+        'scrape_url': 'https://www.unirio.br/cead/editais',
+        'parser': 'ead_editais',
+        'emoji': '🟣',
+    },
+
+    # ┌─────────────────────────────────────┐
+    # │       UFVJM - DEAD (EaD)            │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'UFVJM - EaD (DEAD/UAB)',
+        'feed_url': None,
+        'scrape_url': 'https://www.ead.ufvjm.edu.br/',
+        'parser': 'generico',
+        'emoji': '🟩',
+    },
+
+    # ┌─────────────────────────────────────┐
     # │       UFES                          │
     # └─────────────────────────────────────┘
     {
@@ -377,6 +399,29 @@ SITES = [
         'parser': 'ead_editais',
         'render': True,
         'emoji': '🟡',
+    },
+
+    # ┌─────────────────────────────────────┐
+    # │       IFNMG - CEAD / UAB            │
+    # └─────────────────────────────────────┘
+    {
+        # Atencao: URL por ano. Atualizar o /2026 -> /AAAA a cada virada.
+        'name': 'IFNMG - EaD (CEAD/UAB)',
+        'feed_url': None,
+        'scrape_url': 'https://www.ifnmg.edu.br/editais-uab/2026',
+        'parser': 'ead_editais',
+        'emoji': '🟢',
+    },
+
+    # ┌─────────────────────────────────────┐
+    # │       IFSULDEMINAS - EaD            │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'IFSULDEMINAS - EaD',
+        'feed_url': None,
+        'scrape_url': 'http://portal.ifsuldeminas.edu.br/index.php/pro-reitoria-ensino/ead/editais-ead-geral',
+        'parser': 'ead_editais',
+        'emoji': '🟢',
     },
 
     # ┌─────────────────────────────────────┐
