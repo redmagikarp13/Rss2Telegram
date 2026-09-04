@@ -7,6 +7,7 @@ import telebot
 import requests
 import time
 from urllib.parse import urlparse
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 def _detectar_tipo_url(url):
@@ -81,6 +82,32 @@ class Notifier:
             return url, (site_url or url)
         return '', url
 
+    def _montar_botoes(self, edital):
+        """
+        Monta o teclado inline com botões de acesso rápido.
+
+        - '📖 Ler PDF' → abre o PDF no leitor nativo do Telegram (quando há PDF)
+        - '🔗 Ver na fonte' → abre a página de origem
+        Retorna None quando não há nenhuma URL válida para botionar.
+        """
+        pdf_url, page_url = self._resolver_urls(edital)
+        site_url = edital.get('site_url', '')
+        botoes = []
+
+        if pdf_url:
+            botoes.append(InlineKeyboardButton('📖 Ler PDF', url=pdf_url))
+
+        # "Ver na fonte" leva ao item específico (page_url); cai para a listagem só se não houver
+        destino = page_url or site_url
+        if destino and destino != pdf_url:
+            botoes.append(InlineKeyboardButton('🔗 Ver na fonte', url=destino))
+
+        if not botoes:
+            return None
+        markup = InlineKeyboardMarkup()
+        markup.add(*botoes)
+        return markup
+
     def _montar_mensagem(self, edital, titulo_header):
         """Monta o texto base da mensagem."""
         emoji = edital.get('emoji', '📋')
@@ -111,10 +138,12 @@ class Notifier:
         """Envia um edital — PDF como documento inline, página como mensagem com preview."""
         pdf_url, _ = self._resolver_urls(edital)
         mensagem = self._montar_mensagem(edital, 'Novo Edital Encontrado!')
+        markup = self._montar_botoes(edital)
 
         if self.dryrun:
             print(f"[DRYRUN] PDF={'sim' if pdf_url else 'não'} — Enviaria para {self.chat_id}:")
             print(mensagem)
+            print(self._resumo_botoes(markup))
             print("---")
             return True
 
@@ -126,6 +155,7 @@ class Notifier:
                     pdf_url,
                     caption=mensagem,
                     parse_mode='Markdown',
+                    reply_markup=markup,
                 )
             else:
                 # Envia como mensagem com preview de link (thumbnail da página)
@@ -134,6 +164,7 @@ class Notifier:
                     mensagem,
                     parse_mode='Markdown',
                     disable_web_page_preview=False,
+                    reply_markup=markup,
                 )
 
             time.sleep(1)  # Rate limit do Telegram
@@ -147,6 +178,7 @@ class Notifier:
                     mensagem,
                     parse_mode='Markdown',
                     disable_web_page_preview=False,
+                    reply_markup=markup,
                 )
                 time.sleep(1)
                 return True
@@ -158,10 +190,12 @@ class Notifier:
         """Envia atualização de edital — mesma lógica de PDF/página."""
         pdf_url, _ = self._resolver_urls(edital)
         mensagem = self._montar_mensagem(edital, 'Edital Atualizado!')
+        markup = self._montar_botoes(edital)
 
         if self.dryrun:
             print(f"[DRYRUN] PDF={'sim' if pdf_url else 'não'} — Atualização para {self.chat_id}:")
             print(mensagem)
+            print(self._resumo_botoes(markup))
             print("---")
             return True
 
@@ -172,6 +206,7 @@ class Notifier:
                     pdf_url,
                     caption=mensagem,
                     parse_mode='Markdown',
+                    reply_markup=markup,
                 )
             else:
                 self.bot.send_message(
@@ -179,6 +214,7 @@ class Notifier:
                     mensagem,
                     parse_mode='Markdown',
                     disable_web_page_preview=False,
+                    reply_markup=markup,
                 )
 
             time.sleep(1)
@@ -191,12 +227,25 @@ class Notifier:
                     mensagem,
                     parse_mode='Markdown',
                     disable_web_page_preview=False,
+                    reply_markup=markup,
                 )
                 time.sleep(1)
                 return True
             except Exception as e2:
                 print(f"[ERRO] Fallback da atualização falhou: {e2}")
                 return False
+
+    @staticmethod
+    def _resumo_botoes(markup):
+        """Descrição legível dos botões para o log de dry-run."""
+        if not markup:
+            return "🔘 (sem botões)"
+        partes = []
+        for linha in markup.keyboard:
+            for btn in linha:
+                destino = getattr(btn, 'url', '') or ''
+                partes.append(f"[{btn.text}] → {destino}")
+        return "🔘 " + "  |  ".join(partes) if partes else "🔘 (sem botões)"
 
     def enviar_resumo(self, novos_por_site):
         """Envia um resumo de todos os novos editais encontrados."""
