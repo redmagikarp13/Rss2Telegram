@@ -312,17 +312,6 @@ SITES = [
     },
 
     # ┌─────────────────────────────────────┐
-    # │       UFBA                          │
-    # └─────────────────────────────────────┘
-    {
-        'name': 'UFBA - PROPCI',
-        'feed_url': None,
-        'scrape_url': 'https://propci.ufba.br/editais',
-        'parser': 'generico',
-        'emoji': '🔵',
-    },
-
-    # ┌─────────────────────────────────────┐
     # │       UFPE                          │
     # └─────────────────────────────────────┘
     {
@@ -357,17 +346,6 @@ SITES = [
     },
 
     # ┌─────────────────────────────────────┐
-    # │       UnB                           │
-    # └─────────────────────────────────────┘
-    {
-        'name': 'UnB - DPG',
-        'feed_url': None,
-        'scrape_url': 'https://dpg.unb.br/editais',
-        'parser': 'generico',
-        'emoji': '🏫',
-    },
-
-    # ┌─────────────────────────────────────┐
     # │       UFRGS                         │
     # └─────────────────────────────────────┘
     {
@@ -381,17 +359,6 @@ SITES = [
     # ╔═════════════════════════════════════╗
     # ║  INSTITUTOS FEDERAIS               ║
     # ╚═════════════════════════════════════╝
-
-    # ┌─────────────────────────────────────┐
-    # │       IFMG                          │
-    # └─────────────────────────────────────┘
-    {
-        'name': 'IFMG - Pesquisa',
-        'feed_url': None,
-        'scrape_url': 'https://www.ifmg.edu.br/portal/pesquisa',
-        'parser': 'generico',
-        'emoji': '🟡',
-    },
 
     # ┌─────────────────────────────────────┐
     # │       IFSC                          │
@@ -453,17 +420,6 @@ SITES = [
         'emoji': '🏛️',
     },
 
-    # ┌─────────────────────────────────────┐
-    # │       FAPEMIG (MG)                  │
-    # └─────────────────────────────────────┘
-    {
-        'name': 'FAPEMIG - Editais',
-        'feed_url': None,
-        'scrape_url': 'https://fapemig.br/pt/editais/',
-        'parser': 'generico',
-        'emoji': '⛰️',
-    },
-
     # ╔═════════════════════════════════════╗
     # ║  FUNDAÇÕES DE APOIO                 ║
     # ╚═════════════════════════════════════╝
@@ -477,17 +433,6 @@ SITES = [
         'scrape_url': 'https://www.conexoesparainovar.org.br/editais-conexoes-para-inovar',
         'parser': None,
         'emoji': '💡',
-    },
-
-    # ┌─────────────────────────────────────┐
-    # │       FAPEU (UFSC)                  │
-    # └─────────────────────────────────────┘
-    {
-        'name': 'FAPEU - Editais',
-        'feed_url': None,
-        'scrape_url': 'https://fapeu.org.br/editais/',
-        'parser': 'generico',
-        'emoji': '🏢',
     },
 
     # ┌─────────────────────────────────────┐
@@ -563,17 +508,6 @@ SITES = [
         'name': 'FADEX - Editais',
         'feed_url': None,
         'scrape_url': 'https://www.fadex.org.br/',
-        'parser': 'generico',
-        'emoji': '🏢',
-    },
-
-    # ┌─────────────────────────────────────┐
-    # │       FUNDEP (UFMG)                 │
-    # └─────────────────────────────────────┘
-    {
-        'name': 'FUNDEP - Editais',
-        'feed_url': None,
-        'scrape_url': 'https://www.fundep.ufmg.br/editais/',
         'parser': 'generico',
         'emoji': '🏢',
     },
