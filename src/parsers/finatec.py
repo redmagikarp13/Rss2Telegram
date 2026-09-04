@@ -20,7 +20,6 @@ Estratégia: usar a âncora estável (#23479) como URL (persiste entre renomeaç
 de PDF e transições de status). Adicionalmente, expor o primeiro PDF como
 `pdf_url` para que o notifier envie inline quando disponível.
 """
-import re
 from urllib.parse import quote, urlparse
 from bs4 import BeautifulSoup
 from .base import BaseParser
@@ -78,14 +77,15 @@ class FinatecParser(BaseParser):
                         self.resolver_url(chosen['href'], url_base)
                     )
 
-            # Data: FINATEC não expõe datas estruturadas.
-            # Proxy: extrai ano do título ("Seleção Pública nº 165/2026") ou da URL do PDF.
-            data = self._extrair_data_proxy(titulo, pdf_url)
-
+            # Data: esta página lista apenas licitações ABERTAS agora, e o ano já
+            # vem embutido no título ("nº 165/2026"). NÃO emitimos data de propósito:
+            # um proxy 01/01/AAAA faria a fonte inteira parecer antiga e seria
+            # descartada pelo filtro EDITAL_MAX_DIAS. Sem data, o item é sempre
+            # mantido e o volume é controlado só por MAX_ITENS_POR_FONTE.
             edital = {
                 'titulo': titulo,
                 'url': url,       # URL estável da listagem (link "Ver na fonte")
-                'data': data,
+                'data': '',
             }
             if pdf_url:
                 # Campo extra: o notifier usa para enviar PDF inline se existir
@@ -111,22 +111,3 @@ class FinatecParser(BaseParser):
         except Exception:
             pass
         return url
-
-    def _extrair_data_proxy(self, titulo, pdf_url):
-        """
-        FINATEC não tem data por edital no DOM.
-        Fallback: ano do título ("nº 165/2026") ou ano da pasta do PDF ("/licitacoes/2026/...").
-        Retorna dd/mm/aaaa com 01/01 como placeholder.
-        """
-        if titulo:
-            m = re.search(r'/\s*(\d{4})\b', titulo)
-            if m and 2000 <= int(m.group(1)) <= 2100:
-                return f"01/01/{m.group(1)}"
-            m = re.search(r'\b(\d{4})\b', titulo)
-            if m and 2000 <= int(m.group(1)) <= 2100:
-                return f"01/01/{m.group(1)}"
-        if pdf_url:
-            m = re.search(r'/licitacoes/(\d{4})/', pdf_url)
-            if m:
-                return f"01/01/{m.group(1)}"
-        return ''
