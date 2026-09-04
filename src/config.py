@@ -400,7 +400,9 @@ SITES = [
         'feed_url': None,
         'scrape_url': 'https://www.ifmg.edu.br/portal/educacao-a-distancia/editais-ead',
         'parser': 'ead_editais',
-        'render': True,
+        # render=False: o portal oscila no browser headless (devolvia 0),
+        # mas entrega os editais via requests simples.
+        'render': False,
         'emoji': '🟡',
     },
 
@@ -458,10 +460,13 @@ SITES = [
     # │       CAPES                         │
     # └─────────────────────────────────────┘
     {
-        'name': 'CAPES - Bolsas',
+        'name': 'CAPES - Editais',
         'feed_url': None,
-        'scrape_url': 'https://www.gov.br/capes/pt-br/acesso-a-informacao/acoes-e-programas/bolsas',
-        'parser': 'generico_govbr',
+        # '/acoes-e-programas/bolsas' era so menu; a listagem de editais
+        # abertos fica em 'assuntos/editais-e-resultados-capes'.
+        'scrape_url': 'https://www.gov.br/capes/pt-br/assuntos/editais-e-resultados-capes',
+        'parser': 'ead_editais',
+        'render': True,
         'emoji': '📘',
     },
 
@@ -499,16 +504,8 @@ SITES = [
     # ║  FUNDAÇÕES DE APOIO                 ║
     # ╚═════════════════════════════════════╝
 
-    # ┌─────────────────────────────────────┐
-    # │       FEESC (UFSC)                  │
-    # └─────────────────────────────────────┘
-    {
-        'name': 'FEESC - Conexões para Inovar',
-        'feed_url': 'https://www.conexoesparainovar.org.br/blog-feed.xml',
-        'scrape_url': 'https://www.conexoesparainovar.org.br/editais-conexoes-para-inovar',
-        'parser': None,
-        'emoji': '💡',
-    },
+    # FEESC removida: a pagina so tem editais encerrados/suspensos atras de
+    # iframe (nenhum link acionavel de edital vigente).
 
     # ┌─────────────────────────────────────┐
     # │       PRÓ-IFF (IFF)                 │
@@ -561,7 +558,7 @@ SITES = [
         'name': 'FAPEX - Editais',
         'feed_url': None,
         'scrape_url': 'https://www.fapex.org.br/Fapex/Site/Principal/Edital/index',
-        'parser': 'generico',
+        'parser': 'fapex',
         'emoji': '🏢',
     },
 
@@ -598,14 +595,6 @@ SITES = [
         'emoji': '🏢',
     },
 
-    # ┌─────────────────────────────────────┐
-    # │       FADESP (UFPA)                 │
-    # └─────────────────────────────────────┘
-    {
-        'name': 'FADESP - Editais',
-        'feed_url': None,
-        'scrape_url': 'https://www.fadesp.org.br/editais/',
-        'parser': 'generico',
-        'emoji': '🏢',
-    },
+    # FADESP removida: o dominio fadesp.org.br nao existe mais e o novo
+    # portal so repassa para um portal ASP de licitacoes sem lista limpa.
 ]

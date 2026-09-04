@@ -10,6 +10,7 @@ from .ead_editais import EadEditaisParser
 from .unac_es import UnacEsParser
 from .fapes_es import FapesEsParser
 from .integra_eventos import IntegraEventosParser
+from .fapex import FapexParser
 from .proiff import ProIffParser
 from .proex_ifes import ProexIfesParser
 from .sigpesq_ifes import SigpesqIfesParser
@@ -29,6 +30,7 @@ PARSERS = {
     'unac_es': UnacEsParser,
     'fapes_es': FapesEsParser,
     'integra_eventos': IntegraEventosParser,
+    'fapex': FapexParser,
     'proiff': ProIffParser,
     'proex_ifes': ProexIfesParser,
     'sigpesq_ifes': SigpesqIfesParser,
