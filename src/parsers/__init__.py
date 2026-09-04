@@ -5,6 +5,7 @@ from .generico_govbr import GenericoGovBrParser
 from .generico import GenericoParser
 from .cnpq import CnpqParser
 from .proiff import ProIffParser
+from .proex_ifes import ProexIfesParser
 
 # Mapa de parsers disponíveis (nome -> classe)
 PARSERS = {
@@ -15,6 +16,7 @@ PARSERS = {
     'generico': GenericoParser,
     'cnpq': CnpqParser,
     'proiff': ProIffParser,
+    'proex_ifes': ProexIfesParser,
 }
 
 

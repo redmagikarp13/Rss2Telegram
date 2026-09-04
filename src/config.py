@@ -212,8 +212,8 @@ SITES = [
     {
         'name': 'IFES Proex - Editais',
         'feed_url': 'https://proex.ifes.edu.br/editais?format=feed&type=rss',
-        'scrape_url': 'https://proex.ifes.edu.br/editais',
-        'parser': 'ifes',
+        'scrape_url': 'https://proex.ifes.edu.br/editais?showall=1',
+        'parser': 'proex_ifes',
         'emoji': '🟢',
     },
     {
