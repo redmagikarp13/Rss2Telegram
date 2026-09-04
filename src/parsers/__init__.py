@@ -7,6 +7,7 @@ from .cnpq import CnpqParser
 from .cnpq_govbr import CnpqGovBrParser
 from .unicamp_prp import UnicampPrpParser
 from .ead_editais import EadEditaisParser
+from .unac_es import UnacEsParser
 from .proiff import ProIffParser
 from .proex_ifes import ProexIfesParser
 from .sigpesq_ifes import SigpesqIfesParser
@@ -23,6 +24,7 @@ PARSERS = {
     'cnpq_govbr': CnpqGovBrParser,
     'unicamp_prp': UnicampPrpParser,
     'ead_editais': EadEditaisParser,
+    'unac_es': UnacEsParser,
     'proiff': ProIffParser,
     'proex_ifes': ProexIfesParser,
     'sigpesq_ifes': SigpesqIfesParser,

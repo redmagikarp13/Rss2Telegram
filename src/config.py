@@ -319,6 +319,17 @@ SITES = [
     },
 
     # ┌─────────────────────────────────────┐
+    # │  UnAC - Universidade Aberta do ES   │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'UnAC - Editais Abertos (ES)',
+        'feed_url': None,
+        'scrape_url': 'https://universidades.es.gov.br/editaisabertos',
+        'parser': 'unac_es',
+        'emoji': '🎓',
+    },
+
+    # ┌─────────────────────────────────────┐
     # │       USP                           │
     # └─────────────────────────────────────┘
     {
