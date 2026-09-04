@@ -256,24 +256,6 @@ SITES = [
         'emoji': '🔎',
     },
 
-    # ┌─────────────────────────────────────┐
-    # │       FetchRSS (feeds externos)     │
-    # └─────────────────────────────────────┘
-    {
-        'name': 'FetchRSS - Feed 1',
-        'feed_url': 'https://fetchrss.com/feed/aLIfefetLhGyaLIfY0tsJkZy.rss',
-        'scrape_url': None,
-        'parser': None,
-        'emoji': '📡',
-    },
-    {
-        'name': 'FetchRSS - Feed 2',
-        'feed_url': 'https://fetchrss.com/feed/aLIfefetLhGyaLW_wYnKIIlC.rss',
-        'scrape_url': None,
-        'parser': None,
-        'emoji': '📡',
-    },
-
     # ╔═════════════════════════════════════╗
     # ║  UNIVERSIDADES FEDERAIS             ║
     # ╚═════════════════════════════════════╝
