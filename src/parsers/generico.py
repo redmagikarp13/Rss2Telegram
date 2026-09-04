@@ -16,27 +16,42 @@ class GenericoParser(BaseParser):
         'programa', 'iniciação', 'científica', 'auxílio', 'oportunidade',
     ]
 
+    # Seletores da área de conteúdo, do mais específico ao mais genérico
+    CONTENT_SELECTORS = (
+        '#content, #conteudo, .content, .conteudo, main, '
+        '[role="main"], .page-content, .entry-content, '
+        '#content-core, .main-content, article'
+    )
+
     def parse(self, html, url_base):
-        editais = []
         soup = BeautifulSoup(html, 'html.parser')
 
         # Remover header, footer, nav, sidebar para evitar links de navegação
         for tag in soup.select('header, footer, nav, .sidebar, .menu, #menu, .breadcrumb'):
             tag.decompose()
 
-        # Buscar todos os links na área de conteúdo
-        conteudo = soup.select_one(
-            '#content, #conteudo, .content, .conteudo, main, '
-            '[role="main"], .page-content, .entry-content, '
-            '#content-core, .main-content, article'
-        )
+        root_body = soup.body if soup.body else soup
 
-        if not conteudo:
-            conteudo = soup.body if soup.body else soup
+        # 1. Tenta o container de conteúdo identificado pelos seletores
+        conteudo = soup.select_one(self.CONTENT_SELECTORS)
+        vistos = set()
+        editais = []
+        if conteudo is not None:
+            editais, vistos = self._coletar(conteudo, url_base, vistos, set())
 
-        links = conteudo.find_all('a', href=True) if conteudo else []
+        # 2. Fallback: se o container escolhido veio praticamente vazio
+        #    (ex: Drupal que coloca o conteúdo num bloco fora de #content),
+        #    varre o body inteiro — já sem a "chrome" removida acima.
+        if not editais and conteudo is not root_body:
+            editais, vistos = self._coletar(root_body, url_base, vistos, set())
 
-        urls_vistas = set()
+        return editais
+
+    def _coletar(self, raiz, url_base, vistos, textos_vistos):
+        """Varre os <a> de `raiz`, coletando editais que casem com as keywords."""
+        resultados = []
+        links = raiz.find_all('a', href=True) if raiz else []
+
         for link in links:
             texto = self.limpar_texto(link.get_text())
             href = link.get('href', '')
@@ -46,16 +61,16 @@ class GenericoParser(BaseParser):
 
             url = self.resolver_url(href, url_base)
 
-            # Evitar duplicatas
-            if url in urls_vistas:
+            # Evitar duplicatas de URL e de texto
+            if url in vistos or texto in textos_vistos:
                 continue
 
-            # Verificar se o texto contém alguma keyword relevante
             texto_lower = texto.lower()
             href_lower = href.lower()
             if any(kw in texto_lower or kw in href_lower for kw in self.KEYWORDS):
                 data = self.extrair_data_do_element_pai(link)
-                urls_vistas.add(url)
+                vistos.add(url)
+                textos_vistos.add(texto)
                 item = {
                     'titulo': texto,
                     'url': url,
@@ -64,6 +79,6 @@ class GenericoParser(BaseParser):
                 descricao = self.extrair_descricao_do_contexto(link, texto)
                 if descricao:
                     item['descricao'] = descricao
-                editais.append(item)
+                resultados.append(item)
 
-        return editais
+        return resultados, vistos
