@@ -6,6 +6,7 @@ páginas HTML são enviadas com preview de link.
 import telebot
 import requests
 import time
+from datetime import datetime
 from urllib.parse import urlparse
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -253,7 +254,8 @@ class Notifier:
             return
 
         total = sum(len(editais) for editais in novos_por_site.values())
-        mensagem = f"📊 *Resumo — {total} novo(s) edital(is) encontrado(s):*\n\n"
+        data_hoje = datetime.now().strftime('%d/%m/%Y')
+        mensagem = f"📊 *Resumo do dia {data_hoje} — {total} novo(s) edital(is) encontrado(s):*\n\n"
 
         for site, editais in novos_por_site.items():
             mensagem += f"▸ *{self._escape_md(site)}*: {len(editais)} edital(is)\n"
