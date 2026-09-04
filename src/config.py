@@ -328,6 +328,15 @@ SITES = [
         'parser': 'unac_es',
         'emoji': '🎓',
     },
+    {
+        # Segunda listagem do mesmo portal (editais encerrados/outras
+        # chamadas que ainda trazem oportunidades de bolsa/trabalho).
+        'name': 'UnAC - Mais Oportunidades (ES)',
+        'feed_url': None,
+        'scrape_url': 'https://universidades.es.gov.br/editaisabertos-2',
+        'parser': 'unac_es',
+        'emoji': '🎓',
+    },
 
     # ┌─────────────────────────────────────┐
     # │       USP                           │

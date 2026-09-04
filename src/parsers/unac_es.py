@@ -27,6 +27,14 @@ class UnacEsParser(BaseParser):
         re.IGNORECASE,
     )
 
+    # Listas de resultado / homologacao / convocacao NAO sao oportunidades:
+    # exibe apenas o edital/chamada, nao os desdobramentos posteriores.
+    EXCLUSAO = re.compile(
+        r'(lista[s]?\b.{0,30}\b(classificad|aprovad|habilitad)|'
+        r'\bresultado\b|\bhomologa|\bconvoca|\bclassifica[çc]o)',
+        re.IGNORECASE,
+    )
+
     def parse(self, html, url_base):
         soup = BeautifulSoup(html, 'html.parser')
         editais = []
@@ -42,6 +50,8 @@ class UnacEsParser(BaseParser):
             if not texto or len(texto) < 8:
                 continue
             if not self.PADRAO.search(texto):
+                continue
+            if self.EXCLUSAO.search(texto):
                 continue
 
             url = self.resolver_url(href, url_base)
