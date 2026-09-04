@@ -56,10 +56,14 @@ class GenericoParser(BaseParser):
             if any(kw in texto_lower or kw in href_lower for kw in self.KEYWORDS):
                 data = self.extrair_data_do_element_pai(link)
                 urls_vistas.add(url)
-                editais.append({
+                item = {
                     'titulo': texto,
                     'url': url,
                     'data': data,
-                })
+                }
+                descricao = self.extrair_descricao_do_contexto(link, texto)
+                if descricao:
+                    item['descricao'] = descricao
+                editais.append(item)
 
         return editais

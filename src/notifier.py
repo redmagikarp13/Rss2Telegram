@@ -87,6 +87,7 @@ class Notifier:
         site = edital.get('site', 'Desconhecido')
         titulo = edital.get('titulo', 'Sem título')
         data = edital.get('data', '')
+        descricao = edital.get('descricao', '')
 
         pdf_url, page_url = self._resolver_urls(edital)
 
@@ -96,9 +97,13 @@ class Notifier:
         if data:
             mensagem += f"📅 {self._escape_md(data)}\n"
 
+        # Descrição do que se trata o edital (quando o parser/feed fornece)
+        if descricao:
+            mensagem += f"\n📄 {self._escape_md(descricao)}\n"
+
         # Link sempre aponta para a PÁGINA (não pro PDF)
         if page_url:
-            mensagem += f"🔗 [Ver na fonte]({page_url})\n"
+            mensagem += f"\n🔗 [Ver na fonte]({page_url})\n"
 
         return mensagem
 

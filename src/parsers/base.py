@@ -31,6 +31,57 @@ class BaseParser(ABC):
         return texto.strip()
 
     @staticmethod
+    def limpar_descricao(texto_bruto, max_chars=280):
+        """
+        Converte um trecho (possivelmente HTML) em texto plano de descrição.
+
+        - Remove tags HTML
+        - Descarta o rodapé padrão do WordPress ('O post X apareceu primeiro em Y')
+        - Colapsa espaços e trunca em max_chars cortando na última palavra
+        Retorna '' quando não há conteúdo útil.
+        """
+        if not texto_bruto:
+            return ''
+        texto = re.sub(r'<[^>]+>', ' ', texto_bruto)
+        # WordPress feed trailer
+        texto = re.sub(r'O\s+post\s+.{0,200}?apareceu\s+primeiro\s+em\s+[^.]+\.?\s*$',
+                       '', texto, flags=re.IGNORECASE)
+        texto = re.sub(r'\s+', ' ', texto).strip()
+        if len(texto) > max_chars:
+            corte = texto[:max_chars]
+            espaco = corte.rfind(' ')
+            if espaco > max_chars * 0.6:
+                corte = corte[:espaco]
+            texto = corte.rstrip(' ,;:.') + '…'
+        return texto
+
+    @staticmethod
+    def extrair_descricao_do_contexto(link, titulo, max_chars=280):
+        """
+        Best-effort: procura um texto descritivo na vizinhança do link de edital.
+
+        Percorre os ancestrais até achar um contêiner (li/article/div/p) que tenha
+        mais texto além do próprio link, usa esse excedente como descrição.
+        """
+        pai = link.parent
+        for _ in range(4):
+            if pai is None or pai.name is None:
+                break
+            if pai.name in ('body', 'html', 'main', 'ul', 'ol', 'table'):
+                break
+            texto = BaseParser.limpar_texto(pai.get_text())
+            # Remove o título para sobrar só a descrição
+            resto = texto
+            if titulo:
+                resto = texto.replace(titulo, ' ', 1)
+            resto = BaseParser.limpar_descricao(resto, max_chars)
+            # Só aceita se houver texto relevante além do link
+            if len(resto) >= 25:
+                return resto
+            pai = pai.parent
+        return ''
+
+    @staticmethod
     def resolver_url(href, url_base):
         """Resolve URLs relativas em absolutas."""
         if not href:

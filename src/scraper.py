@@ -9,6 +9,7 @@ import time
 import re
 from datetime import datetime, timedelta
 from parsers import get_parser
+from parsers.base import BaseParser
 
 
 # ══════════════════════════════════════════════════════════
@@ -148,18 +149,18 @@ class ScraperEngine:
             for entry in feed.entries:
                 titulo = entry.get('title', '').strip()
                 url = entry.get('link', '').strip()
-                data = entry.get('published', entry.get('updated', '')).strip()
 
-                # Tentar converter data do feedparser para string dd/mm/aaaa
-                data_str = data
+                # Data: prioriza struct_time parseado (vira dd/mm/aaaa amigável e
+                # filtrável); cai para a string crua apenas se não houver parsed.
+                data_str = ''
+                published = entry.get('published_parsed') or entry.get('updated_parsed')
+                if published:
+                    try:
+                        data_str = datetime(*published[:6]).strftime('%d/%m/%Y')
+                    except Exception:
+                        data_str = ''
                 if not data_str:
-                    published = entry.get('published_parsed') or entry.get('updated_parsed')
-                    if published:
-                        try:
-                            dt = datetime(*published[:6])
-                            data_str = dt.strftime('%d/%m/%Y')
-                        except Exception:
-                            pass
+                    data_str = (entry.get('published') or entry.get('updated') or '').strip()
 
                 # Filtro de data
                 if self.max_dias > 0 and data_str:
@@ -170,11 +171,22 @@ class ScraperEngine:
                             continue
 
                 if titulo and url:
-                    editais.append({
+                    item = {
                         'titulo': titulo,
                         'url': url,
                         'data': data_str,
-                    })
+                    }
+                    # Descrição: RSS traz summary e/ou content (possivelmente HTML)
+                    descricao_bruta = entry.get('summary') or entry.get('description') or ''
+                    if not descricao_bruta:
+                        content = entry.get('content')
+                        if content and isinstance(content, list):
+                            descricao_bruta = content[0].get('value', '')
+                    descricao = BaseParser.limpar_descricao(descricao_bruta)
+                    # Não deixar a descrição repetindo exatamente o título
+                    if descricao and descricao.lower().strip() != titulo.lower().strip():
+                        item['descricao'] = descricao
+                    editais.append(item)
 
             return editais if editais else None
 
