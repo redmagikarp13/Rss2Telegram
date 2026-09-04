@@ -328,15 +328,6 @@ SITES = [
         'parser': 'unac_es',
         'emoji': '🎓',
     },
-    {
-        # O portal chama 'editaisabertos-2', mas na pratica e a lista de
-        # editais JÁ ENCERRADOS (URL confusa no site do ES).
-        'name': 'UnAC - Editais Encerrados (ES)',
-        'feed_url': None,
-        'scrape_url': 'https://universidades.es.gov.br/editaisabertos-2',
-        'parser': 'unac_es',
-        'emoji': '🎓',
-    },
 
     # ┌─────────────────────────────────────┐
     # │       USP                           │
