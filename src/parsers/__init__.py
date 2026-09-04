@@ -7,6 +7,7 @@ from .cnpq import CnpqParser
 from .proiff import ProIffParser
 from .proex_ifes import ProexIfesParser
 from .sigpesq_ifes import SigpesqIfesParser
+from .finatec import FinatecParser
 
 # Mapa de parsers disponíveis (nome -> classe)
 PARSERS = {
@@ -19,6 +20,7 @@ PARSERS = {
     'proiff': ProIffParser,
     'proex_ifes': ProexIfesParser,
     'sigpesq_ifes': SigpesqIfesParser,
+    'finatec': FinatecParser,
 }
 
 

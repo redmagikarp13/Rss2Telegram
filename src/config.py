@@ -521,10 +521,10 @@ SITES = [
     # │       FINATEC (UnB)                 │
     # └─────────────────────────────────────┘
     {
-        'name': 'FINATEC - Editais',
+        'name': 'FINATEC - Licitações Abertas',
         'feed_url': None,
-        'scrape_url': 'https://www.finatec.org.br/',
-        'parser': 'generico',
+        'scrape_url': 'https://www.finatec.org.br/transparencia/licitacoes/informacoes',
+        'parser': 'finatec',
         'emoji': '🏢',
     },
 

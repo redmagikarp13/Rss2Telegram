@@ -62,14 +62,33 @@ class Notifier:
             self._cache_tipo[url] = _detectar_tipo_url(url)
         return self._cache_tipo[url]
 
+    def _resolver_urls(self, edital):
+        """
+        Retorna (pdf_url, page_url) considerando os campos disponíveis.
+
+        Casos suportados:
+        - Parser fornece 'pdf_url' separado (ex: FINATEC): pdf=pdf_url, page=url
+        - 'url' é PDF direto (ex: PROEX): pdf=url, page=site_url
+        - 'url' é página HTML: pdf='', page=url
+        """
+        url = edital.get('url', '')
+        pdf_url = edital.get('pdf_url', '')
+        site_url = edital.get('site_url', '')
+
+        if pdf_url:
+            return pdf_url, url
+        if url and self._tipo_url(url) == 'pdf':
+            return url, (site_url or url)
+        return '', url
+
     def _montar_mensagem(self, edital, titulo_header):
         """Monta o texto base da mensagem."""
         emoji = edital.get('emoji', '📋')
         site = edital.get('site', 'Desconhecido')
         titulo = edital.get('titulo', 'Sem título')
         data = edital.get('data', '')
-        url = edital.get('url', '')
-        site_url = edital.get('site_url', '')
+
+        pdf_url, page_url = self._resolver_urls(edital)
 
         mensagem = f"{emoji} *{titulo_header}*\n\n"
         mensagem += f"📌 *{self._escape_md(titulo)}*\n"
@@ -77,34 +96,29 @@ class Notifier:
         if data:
             mensagem += f"📅 {self._escape_md(data)}\n"
 
-        # Link para a página de origem (se a URL for PDF, mostra o link da página)
-        if site_url and self._tipo_url(url) == 'pdf':
-            mensagem += f"🔗 [Acessar página do edital]({site_url})\n"
-        elif url:
-            mensagem += f"🔗 [Ver na fonte]({url})\n"
+        # Link sempre aponta para a PÁGINA (não pro PDF)
+        if page_url:
+            mensagem += f"🔗 [Ver na fonte]({page_url})\n"
 
         return mensagem
 
     def enviar_edital(self, edital):
         """Envia um edital — PDF como documento inline, página como mensagem com preview."""
-        url = edital.get('url', '')
+        pdf_url, _ = self._resolver_urls(edital)
         mensagem = self._montar_mensagem(edital, 'Novo Edital Encontrado!')
 
         if self.dryrun:
-            tipo = self._tipo_url(url)
-            print(f"[DRYRUN] Tipo={tipo} — Enviaria para {self.chat_id}:")
+            print(f"[DRYRUN] PDF={'sim' if pdf_url else 'não'} — Enviaria para {self.chat_id}:")
             print(mensagem)
             print("---")
             return True
 
         try:
-            tipo = self._tipo_url(url)
-
-            if tipo == 'pdf' and url:
+            if pdf_url:
                 # Envia PDF como documento — visualizável dentro do Telegram
                 self.bot.send_document(
                     self.chat_id,
-                    url,
+                    pdf_url,
                     caption=mensagem,
                     parse_mode='Markdown',
                 )
@@ -137,23 +151,20 @@ class Notifier:
 
     def enviar_atualizacao(self, edital):
         """Envia atualização de edital — mesma lógica de PDF/página."""
-        url = edital.get('url', '')
+        pdf_url, _ = self._resolver_urls(edital)
         mensagem = self._montar_mensagem(edital, 'Edital Atualizado!')
 
         if self.dryrun:
-            tipo = self._tipo_url(url)
-            print(f"[DRYRUN] Tipo={tipo} — Atualização para {self.chat_id}:")
+            print(f"[DRYRUN] PDF={'sim' if pdf_url else 'não'} — Atualização para {self.chat_id}:")
             print(mensagem)
             print("---")
             return True
 
         try:
-            tipo = self._tipo_url(url)
-
-            if tipo == 'pdf' and url:
+            if pdf_url:
                 self.bot.send_document(
                     self.chat_id,
-                    url,
+                    pdf_url,
                     caption=mensagem,
                     parse_mode='Markdown',
                 )
