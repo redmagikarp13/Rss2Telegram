@@ -5,6 +5,7 @@ from .generico_govbr import GenericoGovBrParser
 from .generico import GenericoParser
 from .cnpq import CnpqParser
 from .cnpq_govbr import CnpqGovBrParser
+from .unicamp_prp import UnicampPrpParser
 from .proiff import ProIffParser
 from .proex_ifes import ProexIfesParser
 from .sigpesq_ifes import SigpesqIfesParser
@@ -19,6 +20,7 @@ PARSERS = {
     'generico': GenericoParser,
     'cnpq': CnpqParser,
     'cnpq_govbr': CnpqGovBrParser,
+    'unicamp_prp': UnicampPrpParser,
     'proiff': ProIffParser,
     'proex_ifes': ProexIfesParser,
     'sigpesq_ifes': SigpesqIfesParser,

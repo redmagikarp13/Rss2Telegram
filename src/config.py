@@ -350,8 +350,9 @@ SITES = [
     {
         'name': 'UNICAMP - PRP',
         'feed_url': None,
-        'scrape_url': 'https://www.prp.unicamp.br/pt-br/editais',
-        'parser': 'generico',
+        'scrape_url': 'https://prp.unicamp.br/faepex/editais/',
+        'parser': 'unicamp_prp',
+        'render': True,
         'emoji': '🦄',
     },
 
