@@ -41,6 +41,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Install Playwright browser
+        # Chromium headless para os portais que exigem JavaScript (ex: CNPq)
+        run: playwright install --with-deps chromium
+
       - name: Run script
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}

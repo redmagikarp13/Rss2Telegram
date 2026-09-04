@@ -431,8 +431,9 @@ SITES = [
     {
         'name': 'CNPq - Chamadas Públicas',
         'feed_url': None,
-        'scrape_url': 'https://www.cnpq.br/web/guest/chamadas-publicas',
-        'parser': 'cnpq',
+        'scrape_url': 'https://www.gov.br/cnpq/pt-br/chamadas/abertas-para-submissao',
+        'parser': 'cnpq_govbr',
+        'render': True,
         'emoji': '🔬',
     },
 

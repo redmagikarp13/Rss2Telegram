@@ -4,6 +4,7 @@ from .ufmg import UfmgParser
 from .generico_govbr import GenericoGovBrParser
 from .generico import GenericoParser
 from .cnpq import CnpqParser
+from .cnpq_govbr import CnpqGovBrParser
 from .proiff import ProIffParser
 from .proex_ifes import ProexIfesParser
 from .sigpesq_ifes import SigpesqIfesParser
@@ -17,6 +18,7 @@ PARSERS = {
     'generico_govbr': GenericoGovBrParser,
     'generico': GenericoParser,
     'cnpq': CnpqParser,
+    'cnpq_govbr': CnpqGovBrParser,
     'proiff': ProIffParser,
     'proex_ifes': ProexIfesParser,
     'sigpesq_ifes': SigpesqIfesParser,

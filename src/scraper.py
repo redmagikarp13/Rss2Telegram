@@ -10,6 +10,7 @@ import re
 from datetime import datetime, timedelta
 from parsers import get_parser
 from parsers.base import BaseParser
+import browser
 
 
 # ══════════════════════════════════════════════════════════
@@ -193,10 +194,23 @@ class ScraperEngine:
         except Exception:
             return None
 
-    def _tentar_scraping(self, scrape_url, parser_nome):
+    def _tentar_scraping(self, scrape_url, parser_nome, render=False):
         """Tenta ler editais via web scraping. Retorna lista de editais ou lista vazia."""
         if not scrape_url or not parser_nome:
             return []
+
+        parser = get_parser(parser_nome)
+
+        # 0. Renderização via browser headless (para portais que exigem JavaScript).
+        #    Se Playwright não estiver disponível, renderizar() retorna None e
+        #    seguimos para o caminho requests padrão.
+        if render:
+            html = browser.renderizar(scrape_url)
+            if html:
+                try:
+                    return parser.parse(html, scrape_url)
+                except Exception:
+                    return []
 
         try:
             response = requests.get(
@@ -237,6 +251,7 @@ class ScraperEngine:
         feed_url = site.get('feed_url')
         scrape_url = site.get('scrape_url')
         parser_nome = site.get('parser')
+        render = site.get('render', False)
 
         print(f"  🔍 {nome}... ", end='', flush=True)
 
@@ -245,9 +260,9 @@ class ScraperEngine:
         if editais:
             metodo = 'RSS'
         else:
-            # 2. Fallback para web scraping
-            editais = self._tentar_scraping(scrape_url, parser_nome)
-            metodo = 'Scraping'
+            # 2. Fallback para web scraping (com browser headless se render=True)
+            editais = self._tentar_scraping(scrape_url, parser_nome, render)
+            metodo = 'Browser' if (render and editais) else 'Scraping'
 
         if editais:
             # Adicionar metadados do site
@@ -303,5 +318,8 @@ class ScraperEngine:
                 todos_editais.extend(editais[:self.max_itens_por_fonte])
 
         print(f"📋 {len(todos_editais)} edital(is) após filtros\n")
+
+        # Libera o Chromium headless, se tiver sido usado
+        browser.fechar_navegador()
 
         return todos_editais
