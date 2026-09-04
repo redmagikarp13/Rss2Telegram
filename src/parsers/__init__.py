@@ -6,6 +6,7 @@ from .generico import GenericoParser
 from .cnpq import CnpqParser
 from .proiff import ProIffParser
 from .proex_ifes import ProexIfesParser
+from .sigpesq_ifes import SigpesqIfesParser
 
 # Mapa de parsers disponíveis (nome -> classe)
 PARSERS = {
@@ -17,6 +18,7 @@ PARSERS = {
     'cnpq': CnpqParser,
     'proiff': ProIffParser,
     'proex_ifes': ProexIfesParser,
+    'sigpesq_ifes': SigpesqIfesParser,
 }
 
 

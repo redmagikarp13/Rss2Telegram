@@ -239,6 +239,24 @@ SITES = [
     },
 
     # ┌─────────────────────────────────────┐
+    # │   IFES - SIGPesq (Editais Pesquisa) │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'IFES SIGPesq - Abertos',
+        'feed_url': None,
+        'scrape_url': 'https://sigpesq.ifes.edu.br/publico/Editais.aspx?s=Aberto',
+        'parser': 'sigpesq_ifes',
+        'emoji': '🔎',
+    },
+    {
+        'name': 'IFES SIGPesq - Em Andamento',
+        'feed_url': None,
+        'scrape_url': 'https://sigpesq.ifes.edu.br/publico/Editais.aspx?s=Em+Andamento',
+        'parser': 'sigpesq_ifes',
+        'emoji': '🔎',
+    },
+
+    # ┌─────────────────────────────────────┐
     # │       FetchRSS (feeds externos)     │
     # └─────────────────────────────────────┘
     {
