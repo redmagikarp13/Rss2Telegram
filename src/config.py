@@ -277,6 +277,13 @@ SITES = [
         'parser': 'generico',
         'emoji': '🔴',
     },
+    {
+        'name': 'UFMG - EaD (DEDD)',
+        'feed_url': None,
+        'scrape_url': 'https://www.ufmg.br/dedd/selecoes/',
+        'parser': 'ead_editais',
+        'emoji': '🔴',
+    },
 
     # ┌─────────────────────────────────────┐
     # │       UFES                          │
@@ -359,6 +366,18 @@ SITES = [
     # ╔═════════════════════════════════════╗
     # ║  INSTITUTOS FEDERAIS               ║
     # ╚═════════════════════════════════════╝
+
+    # ┌─────────────────────────────────────┐
+    # │       IFMG - Centro Ref. EaD        │
+    # └─────────────────────────────────────┘
+    {
+        'name': 'IFMG - EaD (CRead/UAB)',
+        'feed_url': None,
+        'scrape_url': 'https://www.ifmg.edu.br/portal/educacao-a-distancia/editais-ead',
+        'parser': 'ead_editais',
+        'render': True,
+        'emoji': '🟡',
+    },
 
     # ┌─────────────────────────────────────┐
     # │       IFSC                          │

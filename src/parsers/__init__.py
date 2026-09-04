@@ -6,6 +6,7 @@ from .generico import GenericoParser
 from .cnpq import CnpqParser
 from .cnpq_govbr import CnpqGovBrParser
 from .unicamp_prp import UnicampPrpParser
+from .ead_editais import EadEditaisParser
 from .proiff import ProIffParser
 from .proex_ifes import ProexIfesParser
 from .sigpesq_ifes import SigpesqIfesParser
@@ -21,6 +22,7 @@ PARSERS = {
     'cnpq': CnpqParser,
     'cnpq_govbr': CnpqGovBrParser,
     'unicamp_prp': UnicampPrpParser,
+    'ead_editais': EadEditaisParser,
     'proiff': ProIffParser,
     'proex_ifes': ProexIfesParser,
     'sigpesq_ifes': SigpesqIfesParser,
