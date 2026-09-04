@@ -477,10 +477,18 @@ SITES = [
     # │       FAPES (ES)                    │
     # └─────────────────────────────────────┘
     {
-        'name': 'FAPES - Editais',
+        # '/editais' era so o menu; os editais reais ficam nestas subpaginas.
+        'name': 'FAPES - Chamadas Publicas (ES)',
         'feed_url': None,
-        'scrape_url': 'https://fapes.es.gov.br/editais',
-        'parser': 'generico_govbr',
+        'scrape_url': 'https://fapes.es.gov.br/chamamento-publico',
+        'parser': 'fapes_es',
+        'emoji': '🌴',
+    },
+    {
+        'name': 'FAPES - Chamadas Internacionais (ES)',
+        'feed_url': None,
+        'scrape_url': 'https://fapes.es.gov.br/chamadas-internacionais',
+        'parser': 'fapes_es',
         'emoji': '🌴',
     },
 
