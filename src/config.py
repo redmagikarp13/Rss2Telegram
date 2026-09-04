@@ -228,6 +228,19 @@ SITES = [
     # editais da PRPPG vao para o SIGPesq (ifes.edu.br/publico/Editais), ja
     # monitorado pelas fontes 'IFES SIGPesq' abaixo.
 
+    # Portal Integra (SPA): o Polo de Inovacao passou a divulgar suas
+    # vinculacoes/editais como "eventos" aqui. scrape_url e a API JSON; o
+    # parser integra_eventos faz json.loads (sem render). Obs: o endpoint
+    # publica ignora page/size/sort e devolve sempre ~10 eventos ativos; o
+    # notifier deduplica por URL, entao so eventos NOVOS geram alerta.
+    {
+        'name': 'IFES Integra - Eventos (Polo)',
+        'feed_url': None,
+        'scrape_url': 'https://integra.ifes.edu.br/api/inovacao/eventos/data',
+        'parser': 'integra_eventos',
+        'emoji': '📅',
+    },
+
     # ┌─────────────────────────────────────┐
     # │   IFES - SIGPesq (Editais Pesquisa) │
     # └─────────────────────────────────────┘

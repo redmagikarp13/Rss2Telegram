@@ -9,6 +9,7 @@ from .unicamp_prp import UnicampPrpParser
 from .ead_editais import EadEditaisParser
 from .unac_es import UnacEsParser
 from .fapes_es import FapesEsParser
+from .integra_eventos import IntegraEventosParser
 from .proiff import ProIffParser
 from .proex_ifes import ProexIfesParser
 from .sigpesq_ifes import SigpesqIfesParser
@@ -27,6 +28,7 @@ PARSERS = {
     'ead_editais': EadEditaisParser,
     'unac_es': UnacEsParser,
     'fapes_es': FapesEsParser,
+    'integra_eventos': IntegraEventosParser,
     'proiff': ProIffParser,
     'proex_ifes': ProexIfesParser,
     'sigpesq_ifes': SigpesqIfesParser,
