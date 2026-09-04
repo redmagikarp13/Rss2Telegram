@@ -223,20 +223,10 @@ SITES = [
         'parser': 'ifes',
         'emoji': '🟢',
     },
-    {
-        'name': 'IFES Polo - Editais',
-        'feed_url': 'https://polo.ifes.edu.br/editais-polo?format=feed&type=rss',
-        'scrape_url': 'https://polo.ifes.edu.br/editais-polo',
-        'parser': 'ifes',
-        'emoji': '🟢',
-    },
-    {
-        'name': 'IFES PRPPG - Editais',
-        'feed_url': None,
-        'scrape_url': 'https://prppg.ifes.edu.br/editais',
-        'parser': 'ifes',
-        'emoji': '🟢',
-    },
+    # IFES Polo e IFES PRPPG removidos: o Polo nao publica mais la (migrou
+    # para o integra.ifes.edu.br) e o '/editais' da PRPPG esta 404 - os
+    # editais da PRPPG vao para o SIGPesq (ifes.edu.br/publico/Editais), ja
+    # monitorado pelas fontes 'IFES SIGPesq' abaixo.
 
     # ┌─────────────────────────────────────┐
     # │   IFES - SIGPesq (Editais Pesquisa) │
