@@ -46,8 +46,10 @@ DRYRUN = get_variable('DRYRUN', 'false').lower() in ('true', '1', 'yes')
 FIRST_RUN_SILENT = get_variable('FIRST_RUN_SILENT', 'true').lower() in ('true', '1', 'yes')
 
 # Filtro de data — janela deslizante (em dias). 0 = desativado
-# No GitHub Actions o valor vem de Settings → Secrets and variables → Actions →
-# Variables (variáveis do repositório), injetado em .github/workflows/scraper.yml.
+# No GitHub Actions o valor vem de Settings → Secrets and variables → Actions,
+# como Secret OU Variable, injetado em .github/workflows/scraper.yml (que usa
+# fallback '90' se nenhuma das duas existir). Defaults locais em 0 para que uma
+# execução fora do Actions não esconda itens por um critério não configurado.
 EDITAL_MAX_DIAS = get_int_variable('EDITAL_MAX_DIAS', 0, 'filtro de recência')
 
 # Limite de itens por fonte por execução. 0 = sem limite

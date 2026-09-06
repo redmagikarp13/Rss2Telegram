@@ -49,16 +49,19 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           DESTINATION: ${{ secrets.DESTINATION }}
-          # Configuravel em Settings → Secrets and variables → Actions → Variables.
-          # O fallback || é obrigatório: uma Variable ausente chega como string
-          # vazia, que sem ele caía no default 0 e desligava os filtros de volume
-          # em silêncio — o bot despejava o histórico inteiro (Proex 514, Agifes
-          # 430, FACTO 160) direto no chat.
-          EDITAL_MAX_DIAS: ${{ vars.EDITAL_MAX_DIAS || '90' }}
-          MAX_ITENS_POR_FONTE: ${{ vars.MAX_ITENS_POR_FONTE || '10' }}
+          # Configurável em Settings → Secrets and variables → Actions, tanto como
+          # Variable (lugar certo para valor não-sensível) quanto como Secret — o
+          # autor já tinha EDITAL_MAX_DIAS e MAX_ITENS_POR_FONTE cadastrados como
+          # SECRET, e o workflow nunca os lia: só BOT_TOKEN e DESTINATION passavam.
+          # O fallback || é obrigatório: uma chave ausente chega como string vazia,
+          # que sem ele caía no default 0 e desligava os filtros de volume em
+          # silêncio — o bot despejava o histórico inteiro (Proex 514, Agifes 430,
+          # FACTO 160) direto no chat.
+          EDITAL_MAX_DIAS: ${{ vars.EDITAL_MAX_DIAS || secrets.EDITAL_MAX_DIAS || '90' }}
+          MAX_ITENS_POR_FONTE: ${{ vars.MAX_ITENS_POR_FONTE || secrets.MAX_ITENS_POR_FONTE || '10' }}
           # Teto agregado: o teto por fonte nao limita o total do chat (51 fontes
           # x 10 ainda somariam centenas de mensagens na mesma rodada).
-          MAX_ITENS_POR_ESTADO: ${{ vars.MAX_ITENS_POR_ESTADO || '20' }}
+          MAX_ITENS_POR_ESTADO: ${{ vars.MAX_ITENS_POR_ESTADO || secrets.MAX_ITENS_POR_ESTADO || '20' }}
         run: |
           python src/main.py
 
