@@ -65,12 +65,25 @@ def main():
     primeira_execucao = (total_registrados == 0)
 
     if primeira_execucao and marcador_existe and not DRYRUN:
-        print("❌ ERRO: Banco de dados vazio mas primeira execução já foi concluída!")
-        print("   Isso indica que o banco de dados foi perdido (artifact corrompido?).")
-        print("   Encerrando para evitar re-envio em massa de editais antigos.")
-        print("   Para forçar uma nova primeira execução, remova o arquivo:")
-        print(f"   {MARCADOR_PRIMEIRA_EXEC_PATH}")
-        sys.exit(1)
+        # Banco perdido (artifact não restaurou, ou expirou os 90 dias de retenção).
+        # Com FIRST_RUN_SILENT, o caminho abaixo regrava tudo sem notificar — o bot
+        # sobrevive e o resumo enviado ao chat avisa da reinicialização. Encerrar com
+        # erro aqui transformaria um evento auto-curável em bot morto até alguém
+        # aparecer; só abortamos quando a regravação ficaria explícita demais, ou
+        # seja, FIRST_RUN_SILENT desligado = re-enviaria tudo como novo.
+        print("⚠️  Banco de dados vazio embora a primeira execução já tenha concluído.")
+        print("   O histórico foi perdido (artifact não restaurou?).")
+        if not FIRST_RUN_SILENT:
+            print("   FIRST_RUN_SILENT está desligado, então a rodada reenviaria tudo.")
+            print("   Encerrando para evitar re-envio em massa de editais antigos.")
+            print("   Para forçar uma nova primeira execução, remova o arquivo:")
+            print(f"   {MARCADOR_PRIMEIRA_EXEC_PATH}")
+            sys.exit(1)
+        aviso = ("histórico de editais perdido — regravando tudo silenciosamente; "
+                 "nenhum edital antigo será reenviado nesta rodada")
+        print(f"   ➡️  {aviso}")
+        if os.environ.get('GITHUB_ACTIONS'):
+            print(f"::warning::{aviso}")
 
     # 1. Executar scraper em todas as fontes
     todos_editais = engine.scrape_todos()

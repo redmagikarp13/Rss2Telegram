@@ -27,12 +27,24 @@ jobs:
           workflow_conclusion: success
           name: editais-db
 
-      - name: Move database and marker
+      - name: Verificar histórico restaurado
         continue-on-error: true
-        # Se o artefato foi baixado, movemos de volta para o diretório raiz
+        # Antes deste passo existir, ele era `mv editais.db editais.db` — movimento
+        # sobre si mesmo, com o erro engolido por `|| true`. O artifact já é
+        # extraído na raiz do workspace, então o passo não fazia nada. Agora ele
+        # só diz a verdade sobre o que chegou: sem esta linha, um artifact não
+        # restaurado passa despercebido no meio de um log verde.
         run: |
-          mv editais.db editais.db || true
-          mv .primeira_exec_concluida .primeira_exec_concluida || true
+          if [ -f editais.db ]; then
+            echo "✅ editais.db restaurado: $(wc -c < editais.db) bytes, $(sqlite3 editais.db 'select count(*) from history' 2>/dev/null || echo '?') registros no histórico"
+          else
+            echo "::warning::editais.db NÃO restaurado — o histórico será recriado do zero nesta rodada"
+          fi
+          if [ -f .primeira_exec_concluida ]; then
+            echo "✅ marcador da primeira execução presente"
+          else
+            echo "::notice::.primeira_exec_concluida ausente (normal até a primeira execução rodar)"
+          fi
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -76,4 +88,9 @@ jobs:
           path: |
             editais.db
             .primeira_exec_concluida
+          # Sem isto, o v4 descarta dotfiles em silêncio (include-hidden-files é
+          # false por padrão): o marcador nunca subiu para o artifact, e a
+          # proteção do main.py contra "banco perdido" nunca pôde disparar.
+          # Confirmado baixando o artifact do run 34020367748: só editais.db dentro.
+          include-hidden-files: true
           retention-days: 90 # Mantém o histórico por 90 dias
