@@ -6,6 +6,7 @@ páginas HTML são enviadas com preview de link.
 import telebot
 import requests
 import time
+import re
 from datetime import datetime
 from urllib.parse import urlparse
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -49,6 +50,11 @@ def _detectar_tipo_url(url):
 
 
 class Notifier:
+    # Limite do Telegram: ~1 msg/s global, mas só ~20 msg/min no MESMO chat. Com
+    # dezenas de itens na rodada, esperar 1s entre eles ainda estoura o grupo.
+    INTERVALO_ENTRE_MENSAGENS = 3.0
+    TENTATIVAS_POR_ITEM = 4
+
     def __init__(self, bot_token, chat_id, dryrun=False):
         self.chat_id = chat_id
         self.dryrun = dryrun
@@ -135,10 +141,55 @@ class Notifier:
 
         return mensagem
 
-    def enviar_edital(self, edital):
-        """Envia um edital — PDF como documento inline, página como mensagem com preview."""
+    @staticmethod
+    def _retry_after(exc):
+        """Segundos que o Telegram pediu num 429, ou None se o erro não é de taxa.
+
+        O corpo estruturado é o caminho oficial, mas o telebot sobe a mensagem como
+        texto; varrer os dois evita ficar cego se o formato mudar.
+        """
+        match = re.search(r'retry after (\d+)', str(exc))
+        if match:
+            return int(match.group(1))
+        try:
+            return int(exc.response.json()['parameters']['retry_after'])
+        except Exception:
+            return None
+
+    def _enviar_texto(self, mensagem, rotulo='mensagem'):
+        """Envia uma mensagem simples, dormindo o retry_after em caso de 429."""
+        for tentativa in range(1, self.TENTATIVAS_POR_ITEM + 1):
+            try:
+                self.bot.send_message(
+                    self.chat_id,
+                    mensagem,
+                    parse_mode='Markdown'
+                )
+                time.sleep(self.INTERVALO_ENTRE_MENSAGENS)
+                return True
+            except Exception as exc:
+                espera = self._retry_after(exc)
+                if espera is None or tentativa == self.TENTATIVAS_POR_ITEM:
+                    print(f"[ERRO] Falha ao enviar {rotulo}: {exc}")
+                    return False
+                print(f"⏳ 429 do Telegram, aguardando {espera}s ({rotulo}, "
+                      f"tentativa {tentativa}/{self.TENTATIVAS_POR_ITEM})")
+                time.sleep(espera + 1)
+        return False
+
+    def _enviar_item(self, edital, titulo_header):
+        """Envia um edital ou atualização. True se chegou, False se desistiu.
+
+        Antes, um 429 caía no except e disparava o fallback send_message na mesma
+        hora, sem esperar: duas chamadas por item estourando o limite cada vez mais,
+        e a rodada inteira voltava em erro. Aqui o 429 dorme o retry_after pedido e
+        repete o MESMO item; o fallback só corre para erro que não é de taxa (PDF
+        recusado, timeout). Sem sucesso devolve False — e como o main só registra no
+        histórico quando recebe True, o item volta na próxima rodada em vez de se
+        perder.
+        """
         pdf_url, _ = self._resolver_urls(edital)
-        mensagem = self._montar_mensagem(edital, 'Novo Edital Encontrado!')
+        mensagem = self._montar_mensagem(edital, titulo_header)
         markup = self._montar_botoes(edital)
 
         if self.dryrun:
@@ -148,93 +199,66 @@ class Notifier:
             print("---")
             return True
 
-        try:
-            if pdf_url:
-                # Envia PDF como documento — visualizável dentro do Telegram
-                self.bot.send_document(
-                    self.chat_id,
-                    pdf_url,
-                    caption=mensagem,
-                    parse_mode='Markdown',
-                    reply_markup=markup,
-                )
-            else:
-                # Envia como mensagem com preview de link (thumbnail da página)
-                self.bot.send_message(
-                    self.chat_id,
-                    mensagem,
-                    parse_mode='Markdown',
-                    disable_web_page_preview=False,
-                    reply_markup=markup,
-                )
-
-            time.sleep(1)  # Rate limit do Telegram
-            return True
-        except Exception as e:
-            print(f"[ERRO] Falha ao enviar mensagem: {e}")
-            # Fallback: se sendDocument falhar (PDF muito grande, timeout), manda como mensagem
+        for tentativa in range(1, self.TENTATIVAS_POR_ITEM + 1):
             try:
-                self.bot.send_message(
-                    self.chat_id,
-                    mensagem,
-                    parse_mode='Markdown',
-                    disable_web_page_preview=False,
-                    reply_markup=markup,
-                )
-                time.sleep(1)
+                if pdf_url:
+                    # Envia PDF como documento — visualizável dentro do Telegram
+                    self.bot.send_document(
+                        self.chat_id,
+                        pdf_url,
+                        caption=mensagem,
+                        parse_mode='Markdown',
+                        reply_markup=markup,
+                    )
+                else:
+                    # Envia como mensagem com preview de link (thumbnail da página)
+                    self.bot.send_message(
+                        self.chat_id,
+                        mensagem,
+                        parse_mode='Markdown',
+                        disable_web_page_preview=False,
+                        reply_markup=markup,
+                    )
+                time.sleep(self.INTERVALO_ENTRE_MENSAGENS)
                 return True
-            except Exception as e2:
-                print(f"[ERRO] Fallback também falhou: {e2}")
+            except Exception as exc:
+                espera = self._retry_after(exc)
+                if espera is not None:
+                    if tentativa == self.TENTATIVAS_POR_ITEM:
+                        print(f"[ERRO] Desistindo após {tentativa} tentativa(s): {exc}")
+                        return False
+                    print(f"⏳ 429 do Telegram, aguardando {espera}s "
+                          f"(tentativa {tentativa}/{self.TENTATIVAS_POR_ITEM})")
+                    time.sleep(espera + 1)
+                    continue
+
+                # Erro que não é limite de taxa: se era PDF, vale cair para mensagem
+                # simples uma vez.
+                if pdf_url:
+                    try:
+                        self.bot.send_message(
+                            self.chat_id,
+                            mensagem,
+                            parse_mode='Markdown',
+                            disable_web_page_preview=False,
+                            reply_markup=markup,
+                        )
+                        time.sleep(self.INTERVALO_ENTRE_MENSAGENS)
+                        return True
+                    except Exception as e2:
+                        print(f"[ERRO] Fallback também falhou: {e2}")
+                else:
+                    print(f"[ERRO] Falha ao enviar mensagem: {exc}")
                 return False
+        return False
+
+    def enviar_edital(self, edital):
+        """Envia um edital — PDF como documento inline, página como mensagem com preview."""
+        return self._enviar_item(edital, 'Novo Edital Encontrado!')
 
     def enviar_atualizacao(self, edital):
         """Envia atualização de edital — mesma lógica de PDF/página."""
-        pdf_url, _ = self._resolver_urls(edital)
-        mensagem = self._montar_mensagem(edital, 'Edital Atualizado!')
-        markup = self._montar_botoes(edital)
-
-        if self.dryrun:
-            print(f"[DRYRUN] PDF={'sim' if pdf_url else 'não'} — Atualização para {self.chat_id}:")
-            print(mensagem)
-            print(self._resumo_botoes(markup))
-            print("---")
-            return True
-
-        try:
-            if pdf_url:
-                self.bot.send_document(
-                    self.chat_id,
-                    pdf_url,
-                    caption=mensagem,
-                    parse_mode='Markdown',
-                    reply_markup=markup,
-                )
-            else:
-                self.bot.send_message(
-                    self.chat_id,
-                    mensagem,
-                    parse_mode='Markdown',
-                    disable_web_page_preview=False,
-                    reply_markup=markup,
-                )
-
-            time.sleep(1)
-            return True
-        except Exception as e:
-            print(f"[ERRO] Falha ao enviar atualização: {e}")
-            try:
-                self.bot.send_message(
-                    self.chat_id,
-                    mensagem,
-                    parse_mode='Markdown',
-                    disable_web_page_preview=False,
-                    reply_markup=markup,
-                )
-                time.sleep(1)
-                return True
-            except Exception as e2:
-                print(f"[ERRO] Fallback da atualização falhou: {e2}")
-                return False
+        return self._enviar_item(edital, 'Edital Atualizado!')
 
     @staticmethod
     def _resumo_botoes(markup):
@@ -265,14 +289,7 @@ class Notifier:
             print(mensagem)
             return
 
-        try:
-            self.bot.send_message(
-                self.chat_id,
-                mensagem,
-                parse_mode='Markdown'
-            )
-        except Exception as e:
-            print(f"[ERRO] Falha ao enviar resumo: {e}")
+        self._enviar_texto(mensagem, 'resumo')
 
     def enviar_status(self, mensagem_texto):
         """Envia mensagem de status (ex: primeira execução)."""
@@ -280,14 +297,7 @@ class Notifier:
             print(f"[DRYRUN] Status: {mensagem_texto}")
             return
 
-        try:
-            self.bot.send_message(
-                self.chat_id,
-                mensagem_texto,
-                parse_mode='Markdown'
-            )
-        except Exception as e:
-            print(f"[ERRO] Falha ao enviar status: {e}")
+        return self._enviar_texto(mensagem_texto, 'status')
 
     @staticmethod
     def _escape_md(text):

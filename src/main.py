@@ -173,6 +173,7 @@ def main():
 
     # 6. Enviar notificações individuais e registrar no banco
     print("📤 Enviando notificações...")
+    falhas = 0
     for edital in novos_editais:
         if edital.get('status') == 'atualizacao':
             sucesso = notifier.enviar_atualizacao(edital)
@@ -181,6 +182,8 @@ def main():
 
         if sucesso:
             storage.registrar(edital['titulo'], edital['url'], edital['site'])
+        else:
+            falhas += 1
 
     # 7. Enviar mensagem de resumo se houver mais de um edital
     if len(novos_editais) > 1:
@@ -193,6 +196,22 @@ def main():
             f"rodada pelo teto de {MAX_ITENS_POR_ESTADO} por estado.\n"
             f"Eles não foram registrados no histórico e podem voltar a aparecer "
             f"em rodadas seguintes."
+        )
+
+    # 9. Expôr envio parcial — sem isso, uma rodada onde nada chega ao chat encerra
+    # em "sucesso" (foi assim que o flood de 05/09 passou verde: 34 erros de taxa e
+    # nada avisado). Não uso exit(1) de propósito: falhar o job faria o upload do
+    # artifact ser pulado, e o histórico dos itens que chegaram se perderia.
+    if falhas > 0:
+        aviso = (f"⚠️ {falhas} de {len(novos_editais)} notificação(ões) não chegaram ao chat "
+                 f"(limite de taxa do Telegram). Ficaram fora do histórico e serão "
+                 f"tentadas de novo na próxima rodada.")
+        print(aviso)
+        if os.environ.get('GITHUB_ACTIONS'):
+            print(f"::warning::{aviso}")
+        notifier.enviar_status(
+            f"⚠️ *{falhas}* de *{len(novos_editais)}* notificação(ões) não chegaram "
+            f"(limite de taxa do Telegram). Serão tentadas de novo na próxima rodada."
         )
 
     print("🎉 Processo concluído com sucesso!")
