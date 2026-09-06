@@ -215,16 +215,19 @@ def main():
     # em "sucesso" (foi assim que o flood de 05/09 passou verde: 34 erros de taxa e
     # nada avisado). Não uso exit(1) de propósito: falhar o job faria o upload do
     # artifact ser pulado, e o histórico dos itens que chegaram se perderia.
+    # Não atribuo causa neste texto: um envio pode falhar por limite de taxa, token
+    # inválido ou chat removido. O motivo real sai no log (`[ERRO] Falha ao enviar
+    # mensagem: ...`), então aqui só digo que não chegou e que o item ficou pendente.
     if falhas > 0:
         aviso = (f"⚠️ {falhas} de {len(novos_editais)} notificação(ões) não chegaram ao chat "
-                 f"(limite de taxa do Telegram). Ficaram fora do histórico e serão "
+                 f"(motivo no log desta rodada). Ficaram fora do histórico e serão "
                  f"tentadas de novo na próxima rodada.")
         print(aviso)
         if os.environ.get('GITHUB_ACTIONS'):
             print(f"::warning::{aviso}")
         notifier.enviar_status(
             f"⚠️ *{falhas}* de *{len(novos_editais)}* notificação(ões) não chegaram "
-            f"(limite de taxa do Telegram). Serão tentadas de novo na próxima rodada."
+            f"(veja o log desta rodada). Serão tentadas de novo na próxima rodada."
         )
 
     print("🎉 Processo concluído com sucesso!")
