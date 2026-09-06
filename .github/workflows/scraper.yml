@@ -26,9 +26,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Baixar artifact do run informado
+        # `run_id` com sublinhado: com hífen a action só emite um warning de
+        # "unexpected input" e IGNORA o parâmetro, baixando o artifact mais
+        # recente -- que é justamente o estado quebrado que se quer substituir.
         uses: dawidd6/action-download-artifact@v6
         with:
-          run-id: ${{ github.event.inputs.restore_run_id }}
+          run_id: ${{ github.event.inputs.restore_run_id }}
           name: editais-db
           path: restaurar/
 
@@ -74,10 +77,12 @@ jobs:
           workflow: scraper.yml
           workflow_conclusion: success
           name: editais-db
-          # Por padrão ele olha só o run bem-sucedido MAIS RECENTE. Um run sem artifact
-          # (como o de ensaio) quebrava a corrente e o scraper começava com banco vazio.
-          # Com 5, ele volta até achar um run que realmente publicou editais-db.
-          run-count: 5
+          # Sem isto a action olha só para o run bem-sucedido mais recente. Um run
+          # sem artifact (como o de ensaio) quebrava a corrente e o scraper abria com
+          # banco vazio. `search_artifacts` faz ela procurar o artifact nos runs até
+          # achar um que o publicou. (`run-count` não existe na v6: a action aceita o
+          # input desconhecido com um warning e ignora em silêncio.)
+          search_artifacts: true
 
       - name: Verificar histórico restaurado
         continue-on-error: true
