@@ -7,11 +7,54 @@ on:
         description: 'Ensaio: não envia nada ao Telegram e não grava o histórico'
         type: boolean
         default: false
+      restore_run_id:
+        description: 'Restaurar: id de um run cujo editais.db deve virar o estado atual (vazio = roda o scraper)'
+        type: string
+        default: ''
   schedule:
     - cron: '0 11 * * *' # Roda diariamente às 11:00 UTC (08:00 BRT)
 
 jobs:
+  # Caminho de recuperação do único estado que existe. Descoberto da pior forma: uma
+  # rodada de ensaio não sobe artifact (não pode subir, ver o `if` no Upload), e passou
+  # a ser o run bem-sucedido mais recente — o download do run seguinte procurou artifact
+  # só nele, não achou, e o scraper abriu com banco vazio. Custou 1390 hashes de memória
+  # e um aviso de "reinicialização" no chat. Este job refaz o estado a partir de
+  # qualquer run anterior, sem apagar nada.
+  restaurar-historico:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.restore_run_id != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar artifact do run informado
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          run-id: ${{ github.event.inputs.restore_run_id }}
+          name: editais-db
+          path: restaurar/
+
+      - name: Validar antes de publicar
+        # O `test -f` é a parte que importa: um restore com run-id errado publicaria um
+        # banco vazio por cima do histórico inteiro, que é exatamente o acidente que
+        # este job existe para consertar.
+        run: |
+          test -f restaurar/editais.db
+          echo "restaurando $(sqlite3 restaurar/editais.db 'select count(*) from history') registros"
+          touch restaurar/.primeira_exec_concluida
+
+      - name: Publicar como estado atual
+        uses: actions/upload-artifact@v4
+        with:
+          name: editais-db
+          path: |
+            restaurar/editais.db
+            restaurar/.primeira_exec_concluida
+          include-hidden-files: true
+          retention-days: 90
+
   run-scraper:
+    # Fica de fora enquanto um restore está em curso: os dois jobs subiriam um artifact
+    # chamado editais-db no mesmo run, e o upload-artifact v4 recusa nomes duplicados.
+    if: github.event.inputs.restore_run_id == ''
     runs-on: ubuntu-latest
     # 15 min era apertado demais: o run de 05/09 foi cancelado aos 15m18s no meio
     # do flood, e um cancelamento deixa o artifact desatualizado (o passo de upload
@@ -31,6 +74,10 @@ jobs:
           workflow: scraper.yml
           workflow_conclusion: success
           name: editais-db
+          # Por padrão ele olha só o run bem-sucedido MAIS RECENTE. Um run sem artifact
+          # (como o de ensaio) quebrava a corrente e o scraper começava com banco vazio.
+          # Com 5, ele volta até achar um run que realmente publicou editais-db.
+          run-count: 5
 
       - name: Verificar histórico restaurado
         continue-on-error: true
