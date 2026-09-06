@@ -1,7 +1,12 @@
 name: Scraper Cron
 
 on:
-  workflow_dispatch: # Permite rodar manualmente pelo GitHub Actions
+  workflow_dispatch: # Permite rodar pelo GitHub Actions, com opção de ensaio
+    inputs:
+      dry_run:
+        description: 'Ensaio: não envia nada ao Telegram e não grava o histórico'
+        type: boolean
+        default: false
   schedule:
     - cron: '0 11 * * *' # Roda diariamente às 11:00 UTC (08:00 BRT)
 
@@ -78,10 +83,18 @@ jobs:
           # Teto agregado: o teto por fonte nao limita o total do chat (51 fontes
           # x 10 ainda somariam centenas de mensagens na mesma rodada).
           MAX_ITENS_POR_ESTADO: ${{ vars.MAX_ITENS_POR_ESTADO || secrets.MAX_ITENS_POR_ESTADO || '20' }}
+          # O config já sabia ler DRYRUN; faltava o workflow expor. Com ele, uma
+          # rodada de ensaio mostra no log exatamente o que seria enviado — sem
+          # tocar no chat, que é o único lugar onde um erro desses é caro.
+          DRYRUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
           python src/main.py
 
       - name: Upload artifact
+        # Bloqueado no ensaio: em DRYRUN o _enviar_item devolve True sem enviar, e
+        # o passo 6 do main.py registra no histórico como se tivesse chegado. Subir
+        # esse banco faria os itens do ensaio sumirem para sempre do chat.
+        if: github.event.inputs.dry_run != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: editais-db
