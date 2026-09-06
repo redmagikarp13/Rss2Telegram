@@ -8,3 +8,10 @@ venv/
 *.db
 .primeira_exec_concluida
 .agents/
+
+# Credenciais nunca vao para o git: no GitHub Actions o bot as recebe de
+# secrets.BOT_TOKEN e secrets.DESTINATION, entao o checkout nao precisa dos .txt.
+# Eles estiveram comitados num repo PUBLICO (commit 93467fe) -- revogar no
+# @BotFather e obrigatorio, apagar daqui nao desfaz a exposicao.
+BOT_TOKEN.txt
+DESTINATION.txt
