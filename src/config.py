@@ -7,15 +7,36 @@ from datetime import datetime
 
 
 def get_variable(variable, default=None):
-    """Lê variável de ambiente ou de arquivo .txt (compatível com projeto anterior)."""
+    """Lê variável de ambiente ou de arquivo .txt (compatível com projeto anterior).
+
+    String vazia/so-espaços conta como NAO configurada. Sem isso, uma GitHub
+    Variable inexistente chegava como '' e o valor caia silenciosamente no
+    default 0, desligando os filtros de volume (causa do flood de editais de 2020).
+    """
     env_val = os.environ.get(variable)
-    if env_val:
-        return env_val
+    if env_val is not None and env_val.strip():
+        return env_val.strip()
     try:
         with open(f'{variable}.txt', 'r', encoding='utf-8') as f:
-            return f.read().strip()
+            arquivo = f.read().strip()
+        if arquivo:
+            return arquivo
     except FileNotFoundError:
+        pass
+    return default
+
+
+def get_int_variable(variable, default, descricao):
+    """get_variable + validacao de inteiro, avisando alto quando o recurso desliga."""
+    bruto = get_variable(variable, str(default))
+    try:
+        valor = int(bruto)
+    except ValueError:
+        print(f"⚠️  {variable}={bruto!r} não é um inteiro válido. Usando {default} ({descricao}).")
         return default
+    if valor <= 0:
+        print(f"⚠️  {variable}={valor}: {descricao} está DESATIVADO — esperado > 0.")
+    return valor
 
 
 # Telegram
@@ -25,10 +46,59 @@ DRYRUN = get_variable('DRYRUN', 'false').lower() in ('true', '1', 'yes')
 FIRST_RUN_SILENT = get_variable('FIRST_RUN_SILENT', 'true').lower() in ('true', '1', 'yes')
 
 # Filtro de data — janela deslizante (em dias). 0 = desativado
-EDITAL_MAX_DIAS = int(get_variable('EDITAL_MAX_DIAS', '0'))
+# No GitHub Actions o valor vem de Settings → Secrets and variables → Actions →
+# Variables (variáveis do repositório), injetado em .github/workflows/scraper.yml.
+EDITAL_MAX_DIAS = get_int_variable('EDITAL_MAX_DIAS', 0, 'filtro de recência')
 
 # Limite de itens por fonte por execução. 0 = sem limite
-MAX_ITENS_POR_FONTE = int(get_variable('MAX_ITENS_POR_FONTE', '0'))
+MAX_ITENS_POR_FONTE = get_int_variable('MAX_ITENS_POR_FONTE', 0, 'teto por fonte')
+
+# Máximo de NOTIFICAÇÕES por estado por execução. 0 = desativado.
+# Proteção final contra flood: o teto por fonte é individual, então 51 fontes × 10
+# ainda podem somar centenas de mensagens numa mesma rodada. Este teto é aplicado
+# depois do dedup, contando mensagens reais.
+MAX_ITENS_POR_ESTADO = get_int_variable('MAX_ITENS_POR_ESTADO', 0, 'teto por estado')
+
+# ──────────────────────────────────────────────────────────
+# AGRUPAMENTO DAS FONTES POR ESTADO
+# Único dono desse mapeamento: é usado no resumo da primeira execução e no teto
+# por estado. Fonte não listada cai em 'Outros' e divide o bucket com as demais
+# não mapeadas, entao o main avisa no log quando isso acontece.
+# ──────────────────────────────────────────────────────────
+SITE_ESTADOS = {
+    'Espírito Santo (ES)': ['SEAD UFES', 'IFES', 'UFES', 'FAPES', 'UnAC'],
+    'Minas Gerais (MG)': ['IFSULDEMINAS', 'UFVJM', 'IFNMG', 'UFMG', 'IFMG',
+                          'FAPEMIG', 'FUNDEP'],
+    'São Paulo (SP)': ['FAPESP', 'FUNCAMP', 'UNICAMP', 'FUSP', 'USP'],
+    'Santa Catarina (SC)': ['UFSC', 'IFSC', 'FAPEU', 'FEESC'],
+    'Rio de Janeiro (RJ)': ['PRÓ-IFF', 'UNIRIO', 'UFRJ', 'FAPUR'],
+    'Bahia (BA)': ['FAPEX', 'UFBA'],
+    'Pernambuco (PE)': ['UFPE'],
+    'Rio Grande do Sul (RS)': ['UFRGS', 'FAURGS'],
+    'Distrito Federal (DF)': ['FINATEC', 'UnB'],
+    'Piauí (PI)': ['FADEX'],
+    'Pará (PA)': ['FADESP'],
+    'Nacional / Fundações': ['FACTO', 'CNPq', 'CAPES'],
+}
+
+ESTADO_PADRAO = 'Outros'
+
+# Casar a keyword MAIS LONGA é obrigatório: 'FAPESP' contém 'FAPES' e 'FUSP'
+# contém 'USP'. Sem isso, a FAPESP-SP caía no bucket do ES pelo keyword 'FAPES'.
+_PAR_ESTADO = sorted(
+    ((kw, estado) for estado, kws in SITE_ESTADOS.items() for kw in kws),
+    key=lambda par: len(par[0]),
+    reverse=True,
+)
+
+
+def classificar_estado(nome_site):
+    """Estado de uma fonte pelo nome; ESTADO_PADRAO quando nao mapeada."""
+    for keyword, estado in _PAR_ESTADO:
+        if keyword in (nome_site or ''):
+            return estado
+    return ESTADO_PADRAO
+
 
 # Arquivo marcador de primeira execução já concluída (proteção contra DB vazio)
 MARCADOR_PRIMEIRA_EXEC_PATH = os.path.join(

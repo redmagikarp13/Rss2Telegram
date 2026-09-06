@@ -1,0 +1,11 @@
+# O repositorio e LF. Sem esta trava, o editor em Windows regrava os arquivos
+# como CRLF e qualquer diff passa a mostrar o arquivo inteiro como modificado
+# (churn de ~3000 linhas para uma mudanca de 80), escondendo a alteracao real.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.db binary

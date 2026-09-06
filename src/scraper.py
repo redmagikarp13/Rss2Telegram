@@ -68,26 +68,78 @@ def _parse_date(data_str):
     return None
 
 
+# Identificador de edital com ano embutido: "Edital Nº 1823/2026",
+# "Chamada 12/2026", "Processo Seletivo 279-2026", "EDITAL n.º 165/2020".
+# Exige a palavra-chave por perto para nao confundir o numero/ano com um valor
+# qualquer do titulo (um falso-positivo antigo descartaria um edital vigente).
+_SINAL_ANO_TITULO = re.compile(
+    r'\b(?:edital|chamada|processo\s*seletivo|sele[çc][ãa]o|concurso|bolsa|'
+    r'aux[íi]lio|licita[çc][ãa]o|preg[ãa]o|termo|conv[êe]nio|projeto|fomento|'
+    r'pr[êe]mio|fluxo\s*cont[íi]nuo)\b'
+    r'[^\d]{0,24}?\d{1,4}\s*[/\-]\s*(20\d{2})\b',
+    re.IGNORECASE,
+)
+
+
+def _ano_do_titulo(titulo):
+    """Ano do identificador do edital ('Edital 1823/2026' -> 2026), ou None.
+
+    Muitas fontes nao publicam data de listagem: emitem data='' de proposito
+    (ead_editais, fapes_es, unac_es, cnpq_govbr, finatec, unicamp_prp) porque um
+    proxy 01/01/AAAA faria a fonte inteira parecer velha. O ano do identificador
+    e o unico sinal de recencia disponivel nelas.
+    """
+    if not titulo:
+        return None
+    match = _SINAL_ANO_TITULO.search(titulo)
+    if not match:
+        return None
+    ano = int(match.group(1))
+    if 2000 <= ano <= datetime.now().year + 1:
+        return ano
+    return None
+
+
+def data_efetiva(edital):
+    """Melhor estimativa de publicacao, ou None quando a fonte nao da sinal.
+
+    Ordem: data real do feed/listagem -> 31/12 do ano do identificador no titulo.
+    Usamos 31/12 (e nao 01/01) de proposito: e a leitura mais benfica do ano, entao
+    um edital do ano corrente nunca cai por causa da janela deslizante, enquanto
+    'Edital 12/2020' continua caindo fora de uma janela de 90 dias.
+    """
+    data = _parse_date(edital.get('data', ''))
+    if data:
+        return data
+    ano = _ano_do_titulo(edital.get('titulo', ''))
+    if ano:
+        return datetime(ano, 12, 31)
+    return None
+
+
 def _filtrar_por_data(editais, max_dias):
-    """Remove editais com data mais antiga que max_dias. Editais sem data são mantidos."""
+    """Remove editais cuja melhor estimativa de data cai fora da janela.
+
+    Itens sem NENHUM sinal de data (nem campo `data`, nem numero/ano no titulo)
+    continuam mantidos: sem informacao nao ha como julgar, e descarta-los
+    silenciaria fontes inteiras.
+    """
     if max_dias <= 0:
         return editais
 
     cutoff = datetime.now() - timedelta(days=max_dias)
     filtrados = []
+    sem_sinal = 0
     for edital in editais:
-        data_str = edital.get('data', '')
-        if not data_str:
-            # Sem data → mantém (não podemos filtrar sem informação)
+        data_ref = data_efetiva(edital)
+        if data_ref is None:
+            sem_sinal += 1
             filtrados.append(edital)
             continue
-        data_parsed = _parse_date(data_str)
-        if data_parsed is None:
-            # Data não parseável → mantém
+        if data_ref >= cutoff:
             filtrados.append(edital)
-            continue
-        if data_parsed >= cutoff:
-            filtrados.append(edital)
+    if sem_sinal:
+        print(f"   ℹ️  {sem_sinal} edital(is) sem nenhum sinal de data foram mantidos")
     return filtrados
 
 
@@ -163,13 +215,11 @@ class ScraperEngine:
                 if not data_str:
                     data_str = (entry.get('published') or entry.get('updated') or '').strip()
 
-                # Filtro de data
-                if self.max_dias > 0 and data_str:
-                    data_parsed = _parse_date(data_str)
-                    if data_parsed:
-                        cutoff = datetime.now() - timedelta(days=self.max_dias)
-                        if data_parsed < cutoff:
-                            continue
+                # Filtro de data — mesma regra do passe global (feed → título).
+                if self.max_dias > 0:
+                    data_ref = data_efetiva({'data': data_str, 'titulo': titulo})
+                    if data_ref and data_ref < datetime.now() - timedelta(days=self.max_dias):
+                        continue
 
                 if titulo and url:
                     item = {
@@ -301,6 +351,8 @@ class ScraperEngine:
             removidos = antes - len(todos_editais)
             if removidos > 0:
                 print(f"📅 Filtro de data (>{self.max_dias} dias): {removidos} edital(is) antigo(s) removido(s)")
+        else:
+            print("📅 Filtro de data DESATIVADO (EDITAL_MAX_DIAS=0): qualquer ano passa")
 
         # Limite de itens por fonte
         if self.max_itens_por_fonte > 0:
@@ -313,9 +365,17 @@ class ScraperEngine:
 
             todos_editais = []
             for site, editais in por_site.items():
+                # Ordena do mais recente para o mais antigo ANTES de cortar, para que
+                # o teto preserve os novos. Arquivos Joomla/WordPress (Proex, Agifes,
+                # FACTO) entregam o historico inteiro e o corte na ordem da pagina
+                # manteria justamente os mais velhos. Sem sinal de data vai para o fim
+                # e a ordenacao estavel preserva a ordem da propria listagem.
+                editais.sort(key=lambda e: data_efetiva(e) or datetime.min, reverse=True)
                 if len(editais) > self.max_itens_por_fonte:
                     print(f"   ⚡ {site}: limitado de {len(editais)} para {self.max_itens_por_fonte}")
                 todos_editais.extend(editais[:self.max_itens_por_fonte])
+        else:
+            print("🔢 Teto por fonte DESATIVADO (MAX_ITENS_POR_FONTE=0): listagens completas passam")
 
         print(f"📋 {len(todos_editais)} edital(is) após filtros\n")
 

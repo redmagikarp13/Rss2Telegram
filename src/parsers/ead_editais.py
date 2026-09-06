@@ -9,8 +9,9 @@ Usado por fontes como:
 Essas paginas ja sao especificas de EaD, entao basta capturar as ancoras que
 seguem o padrao "Edital/Chamada <numero>/<ano>" (o numero/ano e identificador,
 nao data de publicacao). Nao emitimos data: um proxy 01/01/AAAA seria descartado
-pelo EDITAL_MAX_DIAS (armadilha ja evitada em FINATEC/CNPq/UNICAMP). Itens sem
-data sao sempre mantidos; o volume e controlado por MAX_ITENS_POR_FONTE.
+pelo EDITAL_MAX_DIAS (armadilha ja evitada em FINATEC/CNPq/UNICAMP). O scraper tem
+fallback proprio para essas fontes -- usa o ano do identificador do titulo como
+31/12/AAAA --, entao um 'Edital 12/2020' cai fora da janela sem aqui emitir data.
 """
 import re
 from bs4 import BeautifulSoup

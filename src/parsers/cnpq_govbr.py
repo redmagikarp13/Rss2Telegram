@@ -11,7 +11,8 @@ Estratégia:
   "(Chamada|Edital) ... <num>/<ano>".
 - Não emitir data: o número/ano no título é só identificador (não é data de
   publicação), e um proxy 01/01/AAAA seria descartado pelo EDITAL_MAX_DIAS
-  (mesma armadilha já evitada na FINATEC). Volume controlado por MAX_ITENS_POR_FONTE.
+  (mesma armadilha já evitada na FINATEC). O scraper usa o ano do título como
+  fallback de recência (31/12/AAAA); MAX_ITENS_POR_FONTE segue sendo o teto.
 - Exige render=True no config (o gov.br monta a lista via JavaScript).
 """
 import re

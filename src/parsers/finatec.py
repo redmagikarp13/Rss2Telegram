@@ -80,8 +80,9 @@ class FinatecParser(BaseParser):
             # Data: esta página lista apenas licitações ABERTAS agora, e o ano já
             # vem embutido no título ("nº 165/2026"). NÃO emitimos data de propósito:
             # um proxy 01/01/AAAA faria a fonte inteira parecer antiga e seria
-            # descartada pelo filtro EDITAL_MAX_DIAS. Sem data, o item é sempre
-            # mantido e o volume é controlado só por MAX_ITENS_POR_FONTE.
+            # descartada pelo filtro EDITAL_MAX_DIAS. Sem data, o item só é derrubado
+            # se o título trouxer palavra-chave + número/ano antigo (não é o caso
+            # aqui, e a página só lista abertas). Volume: MAX_ITENS_POR_FONTE.
             edital = {
                 'titulo': titulo,
                 'url': url,       # URL estável da listagem (link "Ver na fonte")

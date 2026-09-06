@@ -12,7 +12,8 @@ O link do proprio edital ja e um PDF, entao emitimos tambem pdf_url (mesmo url)
 para o notifier exibir o botao 'Ler PDF' inline no Telegram.
 
 Nao emite data (o '/AAAA' no titulo e identificador, nao publicacao) - mesma
-regra que evita a armadilha do proxy-date no filtro EDITAL_MAX_DIAS.
+regra que evita a armadilha do proxy-date no filtro EDITAL_MAX_DIAS. O scraper
+usa o ano do titulo como fallback de recencia (31/12/AAAA).
 """
 import re
 from bs4 import BeautifulSoup

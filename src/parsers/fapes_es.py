@@ -15,7 +15,8 @@ oportunidade, mantemos apenas o documento principal (cujo texto contem
 
 O conteudo ja vem no HTML estatico (acordeons server-side), entao NAO precisa de
 render. Emite pdf_url = proprio link (ativa o botao 'Ler PDF'). data='' para nao
-cair na armadilha do proxy-date no EDITAL_MAX_DIAS.
+cair na armadilha do proxy-date no EDITAL_MAX_DIAS (o scraper recupera a recencia
+pelo ano do identificador no titulo).
 """
 import re
 from bs4 import BeautifulSoup
