@@ -70,8 +70,8 @@ def _parse_date(data_str):
 
 # Identificador de edital com ano embutido: "Edital Nº 1823/2026",
 # "Chamada 12/2026", "Processo Seletivo 279-2026", "EDITAL n.º 165/2020".
-# Exige a palavra-chave por perto para nao confundir o numero/ano com um valor
-# qualquer do titulo (um falso-positivo antigo descartaria um edital vigente).
+# Exige a palavra-chave por perto para não confundir o número/ano com um valor
+# qualquer do título (um falso-positivo antigo descartaria um edital vigente).
 _SINAL_ANO_TITULO = re.compile(
     r'\b(?:edital|chamada|processo\s*seletivo|sele[çc][ãa]o|concurso|bolsa|'
     r'aux[íi]lio|licita[çc][ãa]o|preg[ãa]o|termo|conv[êe]nio|projeto|fomento|'
@@ -81,32 +81,101 @@ _SINAL_ANO_TITULO = re.compile(
 )
 
 
+# Mesmo sinal, mas sem a palavra-chave. Necessário porque há fontes cujo título
+# veio pronto do <a> e é só o número: o SEAD UFES publica '23/2026', '22/2026',
+# '01/2026 – Chamada – Livro comemorativo' (88 itens do histórico de produção só
+# com o ano como título). O anchor em ^ é o que torna isso seguro: um valor
+# qualquer no meio da frase ('auxílio de R$ 1.200/2025') não pode virar
+# evidência de descarte.
+_SINAL_ANO_LIVRE = re.compile(r'^\s*(\d{1,4})\s*[/\-]\s*(20\d{2})(?!\d)')
+
+# Ano no caminho da URL: uploads do WordPress por data, slug de notícia, carimbo
+# no nome do arquivo. Evidência FRACA — um edital de 2026 pode apontar para um
+# anexo gravado em /uploads/2022/05/ — então só ordena, nunca descarta.
+_SINAL_ANO_URL = (
+    re.compile(r'/uploads/(20\d{2})/(\d{1,2})/'),
+    re.compile(r'/(20\d{2})/(\d{1,2})/'),
+    re.compile(r'/(20\d{2})-(\d{1,2})/'),
+    re.compile(r'[-_](20\d{2})(\d{2})(\d{2})'),
+    re.compile(r'(20\d{2})(\d{2})(\d{2})'),
+    re.compile(r'[?&](?:data|dt|ano|year)=(20\d{2})'),
+)
+
+
+def _ano_valido(ano):
+    """Ano plausível de edital: não o século I nem um ano futurista além do próximo."""
+    return 2000 <= ano <= datetime.now().year + 1
+
+
 def _ano_do_titulo(titulo):
     """Ano do identificador do edital ('Edital 1823/2026' -> 2026), ou None.
 
-    Muitas fontes nao publicam data de listagem: emitem data='' de proposito
+    Muitas fontes não publicam data de listagem: emitem data='' de propósito
     (ead_editais, fapes_es, unac_es, cnpq_govbr, finatec, unicamp_prp) porque um
     proxy 01/01/AAAA faria a fonte inteira parecer velha. O ano do identificador
-    e o unico sinal de recencia disponivel nelas.
+    é o único sinal de recência disponível nelas.
     """
     if not titulo:
         return None
+    anos = []
     match = _SINAL_ANO_TITULO.search(titulo)
-    if not match:
+    if match and _ano_valido(int(match.group(1))):
+        anos.append(int(match.group(1)))
+    livre = _SINAL_ANO_LIVRE.search(titulo)
+    if livre and _ano_valido(int(livre.group(2))):
+        anos.append(int(livre.group(2)))
+    if not anos:
         return None
-    ano = int(match.group(1))
-    if 2000 <= ano <= datetime.now().year + 1:
-        return ano
-    return None
+    # max(): mesma lógica benéfica do 31/12 abaixo. Um título que cita o edital
+    # antigo e a retificação vigente não deve cair por mencionar o ano velho.
+    return max(anos)
+
+
+def _ano_da_url(url):
+    """Ano mais recente encontrado na URL, ou None. Ver _SINAL_ANO_URL: só ordena.
+
+    max() entre os padrões e entre as ocorrências pela mesma razão de
+    _ano_do_titulo: '/2020/01/noticia-20260512.html' é uma página de 2020 com
+    carimbo de 2026, e a leitura benéfica fica com 2026.
+    """
+    anos = []
+    for rx in _SINAL_ANO_URL:
+        for grupos in rx.findall(url or ''):
+            for token in (grupos if isinstance(grupos, tuple) else (grupos,)):
+                if token.startswith('20') and _ano_valido(int(token)):
+                    anos.append(int(token))
+    return max(anos) if anos else None
 
 
 def data_efetiva(edital):
-    """Melhor estimativa de publicacao, ou None quando a fonte nao da sinal.
+    """Melhor estimativa de publicação, ou None quando não há sinal nenhum.
 
-    Ordem: data real do feed/listagem -> 31/12 do ano do identificador no titulo.
-    Usamos 31/12 (e nao 01/01) de proposito: e a leitura mais benfica do ano, entao
-    um edital do ano corrente nunca cai por causa da janela deslizante, enquanto
-    'Edital 12/2020' continua caindo fora de uma janela de 90 dias.
+    Ordem: data real do feed/listagem -> 31/12 do ano mais recente entre título e
+    URL. Usamos 31/12 (e não 01/01) de propósito: é a leitura mais benéfica do
+    ano, então um edital do ano corrente nunca cai por causa da janela
+    deslizante, enquanto 'Edital 12/2020' continua caindo fora de 90 dias.
+
+    Esta função responde "o que é mais recente" e por isso aceita a URL: ela
+    define a ordem (quem sobrevive aos tetos por fonte e por estado). Para
+    DESCARTAR use data_filtravel(), que ignora a evidência fraca.
+    """
+    data = _parse_date(edital.get('data', ''))
+    if data:
+        return data
+    anos = [a for a in (_ano_do_titulo(edital.get('titulo', '')),
+                        _ano_da_url(edital.get('url', ''))) if a]
+    if anos:
+        return datetime(max(anos), 12, 31)
+    return None
+
+
+def data_filtravel(edital):
+    """Estimativa usada para DESCARTAR: apenas evidência forte.
+
+    Data real do feed/listagem ou ano do identificador no título. A URL fica de
+    fora porque o caminho de upload data o ARQUIVO, não o edital. Mantém o viés
+    fail-open do filtro: sem evidência forte o item fica, porque descartar por
+    palpite silenciaria uma fonte inteira.
     """
     data = _parse_date(edital.get('data', ''))
     if data:
@@ -118,10 +187,14 @@ def data_efetiva(edital):
 
 
 def _filtrar_por_data(editais, max_dias):
-    """Remove editais cuja melhor estimativa de data cai fora da janela.
+    """Remove editais cuja evidência forte de data cai fora da janela.
 
-    Itens sem NENHUM sinal de data (nem campo `data`, nem numero/ano no titulo)
-    continuam mantidos: sem informacao nao ha como julgar, e descarta-los
+    Usa data_filtravel(), não data_efetiva(): o ano no caminho da URL data o
+    arquivo anexado, não a oportunidade, e serviria para descartar um edital
+    vigente.
+
+    Itens sem NENHUM sinal forte (nem campo `data`, nem número/ano no título)
+    continuam mantidos: sem informação não há como julgar, e descartá-los
     silenciaria fontes inteiras.
     """
     if max_dias <= 0:
@@ -131,7 +204,7 @@ def _filtrar_por_data(editais, max_dias):
     filtrados = []
     sem_sinal = 0
     for edital in editais:
-        data_ref = data_efetiva(edital)
+        data_ref = data_filtravel(edital)
         if data_ref is None:
             sem_sinal += 1
             filtrados.append(edital)
@@ -215,9 +288,10 @@ class ScraperEngine:
                 if not data_str:
                     data_str = (entry.get('published') or entry.get('updated') or '').strip()
 
-                # Filtro de data — mesma regra do passe global (feed → título).
+                # Filtro de data — mesma regra do passe global (feed → título),
+                # incluindo o fail-open quando nem o feed nem o título dão sinal.
                 if self.max_dias > 0:
-                    data_ref = data_efetiva({'data': data_str, 'titulo': titulo})
+                    data_ref = data_filtravel({'data': data_str, 'titulo': titulo})
                     if data_ref and data_ref < datetime.now() - timedelta(days=self.max_dias):
                         continue
 
