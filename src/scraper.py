@@ -99,6 +99,12 @@ _SINAL_ANO_URL = (
     re.compile(r'[-_](20\d{2})(\d{2})(\d{2})'),
     re.compile(r'(20\d{2})(\d{2})(\d{2})'),
     re.compile(r'[?&](?:data|dt|ano|year)=(20\d{2})'),
+    # Ano sozinho, delimitado, dentro do slug: 'edital-05-dead-2026-processo-…'.
+    # Visto na rodada de ensaio — é a forma do WordPress para notícia SEM data no
+    # slug, e sem este padrão o item cai no fim da fila (data_efetiva None ordena
+    # com datetime.min), justamente o perfil que o teto por estado corta primeiro.
+    # Exige delimitador dos dois lados para não ler '20260' como ano.
+    re.compile(r'[-_/.](20\d{2})(?=[-_/.?&]|$)'),
 )
 
 
