@@ -39,9 +39,13 @@ jobs:
         # O `test -f` é a parte que importa: um restore com run-id errado publicaria um
         # banco vazio por cima do histórico inteiro, que é exatamente o acidente que
         # este job existe para consertar.
+        #
+        # A data impressa é para quem restaura escolher certo: o restore troca o estado
+        # inteiro pelo do run informado, então o que só o banco atual tivesse registrado
+        # deixa de existir e vira notificação repetida na rodada seguinte.
         run: |
           test -f restaurar/editais.db
-          echo "restaurando $(sqlite3 restaurar/editais.db 'select count(*) from history') registros"
+          echo "restaurando $(sqlite3 restaurar/editais.db 'select count(*) from history') registros, último em $(sqlite3 restaurar/editais.db 'select max(data_encontrado) from history') (UTC)"
           touch restaurar/.primeira_exec_concluida
 
       - name: Publicar como estado atual
@@ -93,7 +97,7 @@ jobs:
         # restaurado passa despercebido no meio de um log verde.
         run: |
           if [ -f editais.db ]; then
-            echo "✅ editais.db restaurado: $(wc -c < editais.db) bytes, $(sqlite3 editais.db 'select count(*) from history' 2>/dev/null || echo '?') registros no histórico"
+            echo "✅ editais.db restaurado: $(wc -c < editais.db) bytes, $(sqlite3 editais.db 'select count(*) from history' 2>/dev/null || echo '?') registros, último em $(sqlite3 editais.db 'select max(data_encontrado) from history' 2>/dev/null || echo '?') (UTC)"
           else
             echo "::warning::editais.db NÃO restaurado — o histórico será recriado do zero nesta rodada"
           fi
