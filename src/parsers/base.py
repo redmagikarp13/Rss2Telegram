@@ -81,11 +81,47 @@ class BaseParser(ABC):
             pai = pai.parent
         return ''
 
+    # Esquema repetido no inicio de um href: 'http://https://x' (o prefixo 'http://'
+    # colado num link que ja tinha esquema). Ancorado no inicio e exigindo o segundo
+    # '://' encostado, para nao tocar em '?redirect=http://...' valido.
+    _ESQUEMA_DUPLO = re.compile(r'^([a-z][a-z0-9+.\-]*://)((?:[a-z][a-z0-9+.\-]*://)+)',
+                                re.IGNORECASE)
+
+    @classmethod
+    def normalizar_esquema(cls, href):
+        """Colapsa esquema duplicado: 'http://https://x' -> 'https://x'.
+
+        Vista no historico de producao (FACTO - Editais, 1 linha). Sem isto o
+        startswith('http') de resolver_url devolvia a URL quebrada: o botao do
+        Telegram nao abre, e a mesma oportunidade conta como dois editais
+        distintos na dedup porque a chave e md5(titulo|url).
+        """
+        guardado = cls._ESQUEMA_DUPLO.match(href or '')
+        while guardado:
+            href = guardado.group(2) + href[guardado.end():]
+            guardado = cls._ESQUEMA_DUPLO.match(href)
+        return href
+
+    @staticmethod
+    def ancora_item(url_base, texto):
+        """URL unica para um item que nao tem link proprio.
+
+        Devolver a url_base crua faz todos esses itens compartilharem a mesma URL,
+        e url_hashes e PRIMARY KEY com INSERT OR REPLACE — sobra apenas o hash do
+        ultimo titulo registrado, e a deteccao de atualizacao passa a comparar cada
+        item contra o titulo errado. O fragmento e escolhido em vez de query string
+        porque nao e enviado ao servidor: quem clicar cai na mesma listagem de antes.
+        """
+        slug = re.sub(r'[^a-z0-9]+', '-', (texto or '').lower()).strip('-')[:60]
+        base = (url_base or '').split('#')[0]
+        return f"{base}#{slug}" if slug else base
+
     @staticmethod
     def resolver_url(href, url_base):
         """Resolve URLs relativas em absolutas."""
         if not href:
             return ''
+        href = BaseParser.normalizar_esquema(href.strip())
         if href.startswith('http'):
             return href
         if href.startswith('//'):

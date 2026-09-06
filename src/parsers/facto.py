@@ -54,7 +54,11 @@ class FactoParser(BaseParser):
             if not conteudo_elem or not conteudo_elem.find_all('a', href=True):
                 editais.append({
                     'titulo': titulo_accordion,
-                    'url': url_base,
+                    # ancora_item em vez da url_base crua: sem isso os acordeons sem
+                    # link dividem uma unica URL e a tabela url_hashes (PRIMARY KEY,
+                    # INSERT OR REPLACE) guarda so o ultimo titulo, corrompendo a
+                    # deteccao de atualizacao de todos os outros.
+                    'url': self.ancora_item(url_base, titulo_accordion),
                     'data': '',
                 })
 
