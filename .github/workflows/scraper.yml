@@ -8,7 +8,11 @@ on:
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 15 min era apertado demais: o run de 05/09 foi cancelado aos 15m18s no meio
+    # do flood, e um cancelamento deixa o artifact desatualizado (o passo de upload
+    # nao tem `if: always()`), entao o historico daquele dia se perde e os itens
+    # voltam como "novos" na rodada seguinte. Margem para 51 fontes + Playwright.
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repository
