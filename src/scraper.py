@@ -244,9 +244,24 @@ class ScraperEngine:
         self.max_itens_por_fonte = max_itens_por_fonte
 
     def _tentar_rss(self, feed_url):
-        """Tenta ler editais via RSS feed. Retorna lista de editais ou None se falhar."""
+        """Lê o feed RSS. Retorna (editais, motivo).
+
+        O ponto inteiro é a diferença entre os dois valores possíveis de `editais`:
+
+          - lista, mesmo vazia -> o feed foi lido com sucesso. Lista vazia significa
+            'nenhum item dentro da janela de recência', que é o resultado esperado de
+            uma fonte quieta, e NÃO é motivo para ir raspar o HTML da página.
+          - None -> não consegui ler o feed; `motivo` diz por quê.
+
+        Antes, o `return editais if editais else None` colapsava os dois casos em
+        'falhou'. Resultado: toda fonte cujo último edital era mais velho que a janela
+        passava a ser raspada pelo HTML da página -- e página tem menu, rodapé e link
+        institucional. Em 08/09/2026 o feed do Cefor-UAB esvaziou a janela de 90 dias
+        (último edital em 10/06), o scraper foi para o HTML e dois itens do cardápio
+        do site chegaram ao chat como 'Novo Edital Encontrado!'.
+        """
         if not feed_url:
-            return None
+            return None, 'sem feed configurado'
 
         try:
             response = requests.get(
@@ -257,7 +272,7 @@ class ScraperEngine:
             )
 
             if response.status_code != 200:
-                return None
+                return None, f'HTTP {response.status_code}'
 
             # Verificar se o conteúdo é realmente RSS/XML
             content_type = response.headers.get('Content-Type', '')
@@ -270,12 +285,13 @@ class ScraperEngine:
                 not texto.startswith('<rss') and
                 not texto.startswith('<feed')
             ):
-                return None
+                ct = content_type.strip() or 'indisponivel'
+                return None, f'resposta não é XML (Content-Type: {ct})'
 
             feed = feedparser.parse(texto)
 
             if not feed.entries:
-                return None
+                return None, 'feed sem entries'
 
             editais = []
             for entry in feed.entries:
@@ -319,10 +335,15 @@ class ScraperEngine:
                         item['descricao'] = descricao
                     editais.append(item)
 
-            return editais if editais else None
+            lidos = len(feed.entries)
+            if self.max_dias > 0:
+                resumo = f'{len(editais)}/{lidos} entries na janela de {self.max_dias} dias'
+            else:
+                resumo = f'{len(editais)}/{lidos} entries (recência desligada)'
+            return editais, resumo
 
-        except Exception:
-            return None
+        except Exception as exc:
+            return None, f'{type(exc).__name__}: {exc}'
 
     def _tentar_scraping(self, scrape_url, parser_nome, render=False):
         """Tenta ler editais via web scraping. Retorna lista de editais ou lista vazia."""
@@ -385,14 +406,22 @@ class ScraperEngine:
 
         print(f"  🔍 {nome}... ", end='', flush=True)
 
-        # 1. Tentar RSS primeiro
-        editais = self._tentar_rss(feed_url)
-        if editais:
+        # 1. Tentar RSS primeiro. O teste é `is not None`, e não a truthiness da
+        # lista: foi confundir 'feed lido e vazio na janela' com 'falha de leitura'
+        # que mandou uma fonte quieta para a raspagem do HTML da página (causa dos
+        # links de menu notificados como edital em 08/09/2026).
+        editais, motivo_rss = self._tentar_rss(feed_url)
+        rss_lido = editais is not None
+        if rss_lido:
             metodo = 'RSS'
         else:
             # 2. Fallback para web scraping (com browser headless se render=True)
             editais = self._tentar_scraping(scrape_url, parser_nome, render)
             metodo = 'Browser' if (render and editais) else 'Scraping'
+
+        # Só vale reclamar do RSS quando havia RSS para tentar: fonte configurada sem
+        # feed_url raspa HTML por decisão, não por falha.
+        rss_falhou = (not rss_lido) and bool(feed_url)
 
         if editais:
             # Adicionar metadados do site
@@ -401,10 +430,20 @@ class ScraperEngine:
                 edital['site_url'] = scrape_url or feed_url
                 edital['emoji'] = site.get('emoji', '📋')
 
-            print(f"✅ {len(editais)} edital(is) via {metodo}")
+            # Todo fallback sai no log com o motivo. Sem isto, 'via Scraping' não
+            # dizia que o RSS tinha falhado nem por quê -- foi o que tornou o
+            # incidente de 08/09 caro de rastrear (precisei diffar dois bancos de
+            # estado para chegar a dois títulos).
+            sufixo = f' | RSS falhou: {motivo_rss}' if rss_falhou else ''
+            print(f"✅ {len(editais)} edital(is) via {metodo}{sufixo}")
+        elif rss_lido:
+            # Fonte quieta e saudável: o feed respondeu, só não há nada na janela.
+            # Sai como OK e não como aviso, porque não há nada errado com a fonte.
+            print(f"✅ 0 edital(is) via RSS ({motivo_rss})")
         else:
             editais = []
-            print(f"⚠️ Nenhum edital encontrado")
+            detalhe = f' | RSS: {motivo_rss}' if rss_falhou else ''
+            print(f"⚠️ Nenhum edital encontrado{detalhe}")
 
         return editais
 
